@@ -1,0 +1,183 @@
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// =======================
+// AUTHENTICATION & USERS
+// =======================
+
+enum Role {
+  ADMIN
+  MANAGER
+  CASHIER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role      @default(CASHIER)
+  
+  // Custom relations
+  sales         Sale[]    
+  inventoryLogs InventoryTransaction[]
+  accounts      Account[]
+  sessions      Session[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// =======================
+// MASTER DATA
+// =======================
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  sales     Sale[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  color     String?   
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  sku           String    @unique
+  name          String
+  description   String?
+  price         Decimal   @db.Decimal(10, 2)
+  costPrice     Decimal?  @db.Decimal(10, 2)
+  image         String?
+  barcode       String?   @unique
+  
+  // Inventory
+  stock         Int       @default(0)
+  minStock      Int       @default(5)
+  trackStock    Boolean   @default(true)
+  
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id])
+  
+  saleItems     SaleItem[]
+  inventoryLogs InventoryTransaction[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// =======================
+// POINT OF SALES (POS)
+// =======================
+
+enum SaleStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+model Sale {
+  id            String     @id @default(cuid())
+  receiptNumber String     @unique
+  totalAmount   Decimal    @db.Decimal(10, 2)
+  taxAmount     Decimal    @db.Decimal(10, 2)
+  discount      Decimal    @db.Decimal(10, 2)
+  status        SaleStatus @default(PENDING)
+  paymentMethod String?
+  notes         String?
+  
+  customerId    String?
+  customer      Customer?  @relation(fields: [customerId], references: [id])
+  
+  userId        String     // Cashier
+  user          User       @relation(fields: [userId], references: [id])
+  
+  items         SaleItem[]
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+  discount  Decimal @db.Decimal(10, 2) @default(0)
+  total     Decimal @db.Decimal(10, 2)
+}
+
+// =======================
+// INVENTORY TRANSACTIONS
+// =======================
+
+enum TransactionType {
+  IN
+  OUT
+  ADJUSTMENT
+  SALE
+}
+
+model InventoryTransaction {
+  id        String          @id @default(cuid())
+  productId String
+  product   Product         @relation(fields: [productId], references: [id])
+  type      TransactionType
+  quantity  Int             
+  notes     String?
+  
+  userId    String          
+  user      User            @relation(fields: [userId], references: [id])
+  
+  createdAt DateTime        @default(now())
+}
