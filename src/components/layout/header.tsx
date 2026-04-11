@@ -22,6 +22,11 @@ import { cn } from "@/lib/utils"
 export function Header() {
   const { data: session } = useSession()
   const pathname = usePathname()
+  const userRole = session?.user?.role || ""
+
+  const filteredMenuItems = menuItems.filter(item => 
+    !item.roles || item.roles.includes(userRole)
+  )
 
   return (
     <header className="h-16 border-b border-border/50 bg-card/40 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30 w-full shrink-0">
@@ -44,7 +49,7 @@ export function Header() {
             </div>
             <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-2">Menu Utama</div>
-              {menuItems.map((item) => {
+              {filteredMenuItems.map((item) => {
                 const isActive = pathname === item.href || (pathname?.startsWith(`${item.href}/`) && item.href !== "/dashboard")
                 return (
                   <Link

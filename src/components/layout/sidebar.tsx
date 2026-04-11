@@ -11,21 +11,30 @@ import {
   Store,
   CreditCard,
   LineChart,
-  ClipboardList
+  ClipboardList,
+  CheckCircle2
 } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 export const menuItems = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Transaksi / Kasir", href: "/checkout", icon: Store },
-  { name: "Manajemen Produk", href: "/dashboard/products", icon: Package },
-  { name: "Inventori & Stok", href: "/dashboard/inventory", icon: ClipboardList },
-  { name: "Data Pelanggan", href: "/dashboard/customers", icon: Users },
-  { name: "Laporan Keuangan", href: "/dashboard/reports", icon: LineChart },
-  { name: "Pengaturan", href: "/dashboard/settings", icon: Settings },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "MANAGER", "CASHIER"] },
+  { name: "Transaksi / Kasir", href: "/checkout", icon: Store, roles: ["ADMIN", "MANAGER", "CASHIER"] },
+  { name: "Manajemen Produk", href: "/dashboard/products", icon: Package, roles: ["ADMIN", "MANAGER"] },
+  { name: "Inventori & Stok", href: "/dashboard/inventory", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
+  { name: "Supply Shipment", href: "/dashboard/inventory/supply-shipments", icon: CheckCircle2, roles: ["ADMIN", "MANAGER", "SUPPLIER"] },
+  { name: "Data Pelanggan", href: "/dashboard/customers", icon: Users, roles: ["ADMIN", "MANAGER", "CASHIER"] },
+  { name: "Laporan Keuangan", href: "/dashboard/reports", icon: LineChart, roles: ["ADMIN", "MANAGER"] },
+  { name: "Pengaturan", href: "/dashboard/settings", icon: Settings, roles: ["ADMIN", "MANAGER", "CASHIER", "SUPPLIER"] },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  const userRole = session?.user?.role || ""
+
+  const filteredMenuItems = menuItems.filter(item => 
+    !item.roles || item.roles.includes(userRole)
+  )
 
   return (
     <aside className="w-64 h-screen border-r border-border/50 bg-card/50 backdrop-blur-xl flex flex-col hidden md:flex shrink-0 z-20">
@@ -40,8 +49,12 @@ export function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-2">Menu Utama</div>
-        {menuItems.map((item) => {
-          const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`) && item.href !== "/dashboard"
+        {filteredMenuItems.map((item) => {
+          const isActive = pathname === item.href || (
+            pathname?.startsWith(`${item.href}/`) && 
+            item.href !== "/dashboard" &&
+            !menuItems.some(m => m.href !== item.href && pathname.startsWith(m.href))
+          )
           return (
             <Link
               key={item.href}

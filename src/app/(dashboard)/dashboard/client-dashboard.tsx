@@ -86,7 +86,7 @@ export function ClientDashboard({ todayRevenue, totalProducts, totalCustomers, c
                   <Tooltip 
                     contentStyle={{ backgroundColor: 'hsl(var(--card))', borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
                     labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
-                    formatter={(value: number) => [`Rp ${value.toLocaleString('id-ID')}`, 'Pendapatan']}
+                    formatter={(value: any) => [`Rp ${Number(value || 0).toLocaleString('id-ID')}`, 'Pendapatan']}
                   />
                   <Line 
                     type="monotone" 

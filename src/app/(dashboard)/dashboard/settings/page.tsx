@@ -9,10 +9,28 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { useTheme } from "next-themes"
+import { UserManagementClient } from "./_components/user-management-client"
+import { getUsers } from "@/app/actions/user"
+import { useState, useEffect } from "react"
 
 export default function SettingsPage() {
   const { data: session, status } = useSession()
   const { theme, setTheme } = useTheme()
+  const [users, setUsers] = useState<any[]>([])
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false)
+
+  const isAdmin = session?.user?.role === "ADMIN"
+  const canManageStore = isAdmin || session?.user?.role === "MANAGER"
+
+  useEffect(() => {
+    if (isAdmin) {
+      setIsLoadingUsers(true)
+      getUsers().then(data => {
+        setUsers(data as any)
+        setIsLoadingUsers(false)
+      })
+    }
+  }, [isAdmin])
 
   if (status === "loading") {
     return <div className="flex-1 flex items-center justify-center p-8 text-muted-foreground animate-pulse">Memuat pengaturan...</div>
@@ -33,10 +51,18 @@ export default function SettingsPage() {
             <User className="w-4 h-4 mr-2" />
             Profil Akun
           </TabsTrigger>
-          <TabsTrigger value="store" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Store className="w-4 h-4 mr-2" />
-            Informasi Toko
-          </TabsTrigger>
+          {canManageStore && (
+            <TabsTrigger value="store" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Store className="w-4 h-4 mr-2" />
+              Informasi Toko
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Shield className="w-4 h-4 mr-2" />
+              Manajemen User
+            </TabsTrigger>
+          )}
           <TabsTrigger value="appearance" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Paintbrush className="w-4 h-4 mr-2" />
             Tampilan
@@ -70,11 +96,11 @@ export default function SettingsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nama Lengkap</Label>
-                  <Input id="name" defaultValue={session?.user?.name || ""} className="bg-background/50" />
+                  <Input key={session?.user?.email + "name"} id="name" defaultValue={session?.user?.name || ""} className="bg-background/50" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Alamat Email</Label>
-                  <Input id="email" defaultValue={session?.user?.email || ""} className="bg-background/50" disabled />
+                  <Input key={session?.user?.email + "email"} id="email" defaultValue={session?.user?.email || ""} className="bg-background/50" disabled />
                   <p className="text-xs text-muted-foreground">Email digunakan untuk otentikasi login, hubungi pihak IT untuk mengubah.</p>
                 </div>
               </div>
@@ -85,35 +111,47 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="store" className="space-y-4">
-          <Card className="border-border/50 bg-card/40 backdrop-blur-md">
-            <CardHeader>
-              <CardTitle>Identitas Bisnis</CardTitle>
-              <CardDescription>
-                Konfigurasi yang tercetak di struk pelanggan dan laporan aplikasi.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="store-name">Nama Toko / Outlet</Label>
-                  <Input id="store-name" defaultValue="POS Next Premium" className="bg-background/50" />
+        {canManageStore && (
+          <TabsContent value="store" className="space-y-4">
+            <Card className="border-border/50 bg-card/40 backdrop-blur-md">
+              <CardHeader>
+                <CardTitle>Identitas Bisnis</CardTitle>
+                <CardDescription>
+                  Konfigurasi yang tercetak di struk pelanggan dan laporan aplikasi.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="store-name">Nama Toko / Outlet</Label>
+                    <Input id="store-name" defaultValue="POS Next Premium" className="bg-background/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tax-rate">Persentase PPN (%)</Label>
+                    <Input id="tax-rate" defaultValue="11" type="number" className="bg-background/50" />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="tax-rate">Persentase PPN (%)</Label>
-                  <Input id="tax-rate" defaultValue="11" type="number" className="bg-background/50" />
+                  <Label htmlFor="address">Alamat Pusat / Cabang (Akan tercetak di Struk)</Label>
+                  <Input id="address" defaultValue="Jalan Sudirman Kav 24, Jakarta Pusat" className="bg-background/50" />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Alamat Pusat / Cabang (Akan tercetak di Struk)</Label>
-                <Input id="address" defaultValue="Jalan Sudirman Kav 24, Jakarta Pusat" className="bg-background/50" />
-              </div>
-            </CardContent>
-            <CardFooter className="bg-muted/20 border-t border-border/50 py-4 flex justify-end">
-              <Button>Perbarui Toko</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
+              </CardContent>
+              <CardFooter className="bg-muted/20 border-t border-border/50 py-4 flex justify-end">
+                <Button>Perbarui Toko</Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="users" className="space-y-4">
+            {isLoadingUsers ? (
+              <div className="flex items-center justify-center p-12 text-muted-foreground">Memuat data user...</div>
+            ) : (
+              <UserManagementClient initialUsers={users} />
+            )}
+          </TabsContent>
+        )}
 
         <TabsContent value="appearance">
           <Card className="border-border/50 bg-card/40 backdrop-blur-md">

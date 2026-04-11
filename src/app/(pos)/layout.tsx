@@ -1,3 +1,4 @@
+import { ReactNode } from "react"
 import { TopBar } from "./_components/topbar"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"

@@ -16,6 +16,7 @@ enum Role {
   MANAGER
   CASHIER
   CUSTOMER
+  SUPPLIER
 }
 
 model User {
@@ -30,6 +31,8 @@ model User {
   // Custom relations
   sales         Sale[]    
   inventoryLogs InventoryTransaction[]
+  supplyShipments SupplyShipment[] @relation("SupplierShipments")
+  approvedShipments SupplyShipment[] @relation("AdminApprovals")
   accounts      Account[]
   sessions      Session[]
   
@@ -108,9 +111,35 @@ model Product {
   
   saleItems     SaleItem[]
   inventoryLogs InventoryTransaction[]
+  supplyShipments SupplyShipment[]
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model SupplyShipment {
+  id          String        @id @default(cuid())
+  productId   String
+  product     Product       @relation(fields: [productId], references: [id])
+  
+  supplierId  String
+  supplier    User          @relation("SupplierShipments", fields: [supplierId], references: [id])
+  
+  quantity    Int
+  notes       String?
+  status      RequestStatus @default(PENDING)
+  
+  adminId     String?
+  admin       User?         @relation("AdminApprovals", fields: [adminId], references: [id])
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
 // =======================

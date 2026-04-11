@@ -25,7 +25,7 @@ export default async function ReportsPage() {
     amount: Number(s.totalAmount),
     tax: Number(s.taxAmount),
     discount: Number(s.discount),
-    paymentMethod: s.paymentMethod,
+    paymentMethod: s.paymentMethod !== null ? s.paymentMethod : "-",
     cashierName: s.user?.name || "-",
     itemsCount: s.items.length,
     itemsDetail: s.items.map(i => ({
