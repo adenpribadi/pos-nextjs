@@ -15,6 +15,7 @@ enum Role {
   ADMIN
   MANAGER
   CASHIER
+  CUSTOMER
 }
 
 model User {

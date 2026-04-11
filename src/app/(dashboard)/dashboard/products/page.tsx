@@ -13,6 +13,12 @@ export default async function ProductsPage() {
     }
   })
 
+  const categories = await prisma.category.findMany({
+    orderBy: {
+      name: "asc"
+    }
+  })
+
   // Format products for the client table
   const formattedProducts = products.map(product => ({
     id: product.id,
@@ -22,6 +28,8 @@ export default async function ProductsPage() {
     price: Number(product.price),
     stock: product.stock,
     status: product.stock > 0 ? "Tersedia" : "Habis",
+    image: product.image,
+    categoryId: product.categoryId || "",
   }))
 
   return (
@@ -35,7 +43,7 @@ export default async function ProductsPage() {
         </div>
       </div>
       
-      <ProductsClient data={formattedProducts} />
+      <ProductsClient data={formattedProducts} categories={categories} />
     </div>
   )
 }

@@ -12,12 +12,22 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = session.user.id
+    const userRole = session.user.role
 
     const body = await request.json()
     const { items, taxAmount, totalAmount, discount, paymentMethod } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Keranjang kosong" }, { status: 400 })
+    }
+
+    // Jika user adalah CUSTOMER, kita harus mencari entitas Customer yang sesuai
+    let customerId = null
+    if (userRole === "CUSTOMER") {
+      const customer = await prisma.customer.findFirst({
+        where: { email: session.user.email || "" }
+      })
+      customerId = customer?.id
     }
 
     // Gunakan Prisma Interactive Transaction
@@ -74,9 +84,10 @@ export async function POST(request: NextRequest) {
           totalAmount: totalAmount,
           taxAmount: taxAmount,
           discount: discount,
-          status: "PAID", // Status langsung PAID karena ini POS
+          status: userRole === "CUSTOMER" ? "PENDING" : "PAID", // Customer self-checkout stays PENDING until payment confirmation
           paymentMethod: paymentMethod,
           userId: userId,
+          customerId: customerId,
           items: {
             create: items.map((item: any) => ({
               productId: item.productId,

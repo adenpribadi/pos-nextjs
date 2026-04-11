@@ -47,15 +47,15 @@ export default function Home() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <Link href="/login" className="w-full sm:w-auto">
-            <Button size="lg" className="h-14 px-8 text-lg w-full shadow-xl shadow-primary/20 group">
-              Buka Aplikasi Kasir
+          <Link href="/store" className="w-full sm:w-auto">
+            <Button size="lg" className="h-14 px-8 text-lg w-full shadow-xl shadow-primary/20 group bg-emerald-600 hover:bg-emerald-700">
+              Belanja Sekarang
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
-          <Link href="/dashboard" className="w-full sm:w-auto">
+          <Link href="/login" className="w-full sm:w-auto">
             <Button size="lg" variant="outline" className="h-14 px-8 text-lg w-full bg-background/50 backdrop-blur-sm border-border/50 hover:bg-muted/50">
-              Dashboard Manajerial
+              Akses Kasir / Admin
             </Button>
           </Link>
         </div>

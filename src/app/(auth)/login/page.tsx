@@ -4,8 +4,9 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -56,7 +57,15 @@ export default function LoginPage() {
       if (response?.error) {
         setError("Email atau Password salah.")
       } else {
-        router.push("/dashboard") // Redirect ke rute dashboard berdasarkan role nantinya
+        // Ambil sesi terbaru untuk mengecek role
+        const session = await getSession()
+        
+        if (session?.user?.role === "CUSTOMER") {
+          router.push("/store")
+        } else {
+          router.push("/dashboard")
+        }
+        
         router.refresh()
       }
     } catch (err) {
@@ -150,6 +159,13 @@ export default function LoginPage() {
                 </Button>
               </form>
             </Form>
+
+            <div className="mt-6 text-center">
+              <span className="text-sm text-muted-foreground mr-1">Belum punya akun?</span>
+              <Link href="/register" className="text-sm font-semibold text-primary hover:underline">
+                Daftar sebagai Pelanggan
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>

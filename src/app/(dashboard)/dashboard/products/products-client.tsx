@@ -41,13 +41,23 @@ interface ProductColumn {
   price: number
   stock: number
   status: string
+  image?: string | null
+  categoryId?: string
 }
 
-export function ProductsClient({ data }: { data: ProductColumn[] }) {
+interface Category {
+  id: string
+  name: string
+}
+
+export function ProductsClient({ data, categories }: { data: ProductColumn[], categories: Category[] }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<ProductColumn | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [isCompressing, setIsCompressing] = useState(false)
+  const [compressedFile, setCompressedFile] = useState<File | null>(null)
   const { canManageProducts, isLoading } = usePermissions()
 
   const handleAddClick = () => {
@@ -57,7 +67,78 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
       })
       return
     }
+    setPreviewUrl(null)
+    setCompressedFile(null)
     setIsAddOpen(true)
+  }
+
+  const compressImage = async (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = (event) => {
+        const img = new Image()
+        img.src = event.target?.result as string
+        img.onload = () => {
+          const canvas = document.createElement("canvas")
+          let width = img.width
+          let height = img.height
+
+          const MAX_SIZE = 1000
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width
+              width = MAX_SIZE
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height
+              height = MAX_SIZE
+            }
+          }
+
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext("2d")
+          ctx?.drawImage(img, 0, 0, width, height)
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressed = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                  type: "image/webp",
+                  lastModified: Date.now(),
+                })
+                resolve(compressed)
+              } else {
+                reject(new Error("Gagal mengompres gambar"))
+              }
+            },
+            "image/webp",
+            0.8
+          )
+        }
+      }
+      reader.onerror = (error) => reject(error)
+    })
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setIsCompressing(true)
+      try {
+        const compressed = await compressImage(file)
+        setCompressedFile(compressed)
+        const url = URL.createObjectURL(compressed)
+        setPreviewUrl(url)
+      } catch (error) {
+        console.error(error)
+        toast.error("Gagal memproses gambar")
+      } finally {
+        setIsCompressing(false)
+      }
+    }
   }
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -65,6 +146,9 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
     setIsSubmitting(true)
 
     const formData = new FormData(e.currentTarget)
+    if (compressedFile) {
+      formData.set("image", compressedFile)
+    }
     const res = await createProduct(formData)
 
     if (res.success) {
@@ -72,6 +156,8 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
         description: "Produk telah masuk ke katalog dan log inventori awal tersimpan."
       })
       setIsAddOpen(false)
+      setPreviewUrl(null)
+      setCompressedFile(null)
     } else {
       toast.error("Gagal Menambah Produk", {
         description: res.error
@@ -86,11 +172,15 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
     setIsSubmitting(true)
 
     const formData = new FormData(e.currentTarget)
+    if (compressedFile) {
+      formData.set("image", compressedFile)
+    }
     const res = await updateProduct(formData)
 
     if (res.success) {
       toast.success("Produk Berhasil Diubah")
       setEditingProduct(null)
+      setCompressedFile(null)
     } else {
       toast.error("Gagal Mengubah", { description: res.error })
     }
@@ -145,6 +235,7 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
         <Table>
           <TableHeader className="bg-muted/30">
             <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[80px]">Foto</TableHead>
               <TableHead className="w-[100px]">SKU</TableHead>
               <TableHead>Nama Produk</TableHead>
               <TableHead>Kategori</TableHead>
@@ -164,6 +255,15 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
             ) : (
               filteredData.map((item) => (
                 <TableRow key={item.id} className="transition-colors hover:bg-muted/40">
+                  <TableCell>
+                    <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden border border-border/50">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <Plus className="h-4 w-4 text-muted-foreground/40" />
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{item.sku}</TableCell>
                   <TableCell className="font-medium text-foreground">{item.name}</TableCell>
                   <TableCell>{item.category}</TableCell>
@@ -191,6 +291,8 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
                           className="cursor-pointer"
                           onClick={() => {
                             if (!canManageProducts) return toast.error("Akses Ditolak")
+                            setPreviewUrl(null)
+                            setCompressedFile(null)
                             setEditingProduct(item)
                           }}
                         >
@@ -214,7 +316,13 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
         </Table>
       </CardContent>
 
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+      <Dialog open={isAddOpen} onOpenChange={(open) => {
+        setIsAddOpen(open)
+        if (!open) {
+          setPreviewUrl(null)
+          setCompressedFile(null)
+        }
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Tambah Produk Baru</DialogTitle>
@@ -225,8 +333,52 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
               <Input id="sku" name="sku" placeholder="Misal: ITM-001" required />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="categoryId">Kategori Produk</Label>
+              <select 
+                id="categoryId" 
+                name="categoryId" 
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all cursor-pointer"
+              >
+                <option value="">Pilih Kategori...</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="name">Nama Produk <span className="text-destructive">*</span></Label>
               <Input id="name" name="name" placeholder="Misal: Kopi Hitam Premium" required />
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="image" className="cursor-pointer">
+                  URL Foto Produk / Upload Foto
+                  <div className="mt-2 h-48 w-full border-2 border-dashed border-border/50 rounded-xl flex flex-col items-center justify-center bg-muted/20 hover:bg-muted/40 transition-all overflow-hidden relative group">
+                    {previewUrl ? (
+                      <img src={previewUrl} className="h-full w-full object-cover" />
+                    ) : (
+                      <>
+                        <Plus className="h-6 w-6 text-muted-foreground mb-2 group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] text-muted-foreground font-medium">Klik untuk Pilih Gambar</span>
+                      </>
+                    )}
+                    {isCompressing && (
+                      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-200">
+                        <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+                        <span className="text-xs font-bold text-primary animate-pulse uppercase tracking-wider">Converting...</span>
+                      </div>
+                    )}
+                  </div>
+                </Label>
+                <Input 
+                  id="image" 
+                  name="image" 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleFileChange}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -242,15 +394,21 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
               <Button type="button" variant="ghost" onClick={() => setIsAddOpen(false)}>
                 Batal
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Simpan Produk"}
+              <Button type="submit" disabled={isSubmitting || isCompressing}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isCompressing ? "Converting..." : "Simpan Produk")}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
+      <Dialog open={!!editingProduct} onOpenChange={(open) => {
+        if (!open) {
+          setEditingProduct(null)
+          setPreviewUrl(null)
+          setCompressedFile(null)
+        }
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Edit Produk</DialogTitle>
@@ -263,8 +421,50 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
                 <Input id="edit-sku" name="sku" defaultValue={editingProduct.sku} required />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="edit-categoryId">Kategori Produk</Label>
+                <select 
+                  id="edit-categoryId" 
+                  name="categoryId" 
+                  defaultValue={editingProduct.categoryId}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  <option value="">Pilih Kategori...</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="edit-name">Nama Produk <span className="text-destructive">*</span></Label>
                 <Input id="edit-name" name="name" defaultValue={editingProduct.name} required />
+              </div>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-image" className="cursor-pointer">
+                    Ganti Foto Produk
+                    <div className="mt-2 h-48 w-full border-2 border-dashed border-border/50 rounded-xl flex flex-col items-center justify-center bg-muted/20 hover:bg-muted/40 transition-all overflow-hidden relative">
+                      {previewUrl || editingProduct.image ? (
+                        <img src={previewUrl || editingProduct.image || ""} className="h-full w-full object-cover" />
+                      ) : (
+                        <Plus className="h-6 w-6 text-muted-foreground" />
+                      )}
+                      {isCompressing && (
+                        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-200">
+                          <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+                          <span className="text-xs font-bold text-primary animate-pulse uppercase tracking-wider">Converting...</span>
+                        </div>
+                      )}
+                    </div>
+                  </Label>
+                  <Input 
+                    id="edit-image" 
+                    name="image" 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleFileChange}
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -280,9 +480,9 @@ export function ProductsClient({ data }: { data: ProductColumn[] }) {
                 <Button type="button" variant="ghost" onClick={() => setEditingProduct(null)}>
                   Batal
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Simpan Perubahan"}
-                </Button>
+              <Button type="submit" disabled={isSubmitting || isCompressing}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isCompressing ? "Converting..." : "Simpan Perubahan")}
+              </Button>
               </DialogFooter>
             </form>
           )}
