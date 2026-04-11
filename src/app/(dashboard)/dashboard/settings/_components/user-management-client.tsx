@@ -74,7 +74,7 @@ export function UserManagementClient({ initialUsers }: { initialUsers: UserEntry
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-xl font-bold">Daftar Pengguna</h3>
-          <p className="text-sm text-muted-foreground">Kelola siapa saja yang bisa mengakses dashboard sistem POS ini.</p>
+          <p className="text-sm text-muted-foreground">Kelola siapa saja yang bisa mengakses dashboard sistem BintangPOS ini.</p>
         </div>
         <Button onClick={() => setIsAddOpen(true)} className="shadow-lg shadow-primary/20">
           <Plus className="w-4 h-4 mr-2" />

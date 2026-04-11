@@ -12,9 +12,11 @@ export function TopBar() {
 
   return (
     <header className="h-14 border-b border-border/50 bg-card/50 backdrop-blur-md flex items-center justify-between px-6 z-50">
-      <div className="flex items-center gap-2 text-primary">
-        <Store className="h-6 w-6" />
-        <span className="font-bold tracking-tight text-lg">POS Launchpad</span>
+      <div className="flex items-center gap-3">
+        <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
+          <Store className="h-5 w-5 text-primary-foreground" />
+        </div>
+        <span className="font-bold tracking-tight text-lg">BintangPOS Launchpad</span>
       </div>
 
       <div className="flex items-center gap-4">

@@ -56,6 +56,7 @@ export default function LoginPage() {
 
       if (response?.error) {
         setError("Email atau Password salah.")
+        setIsLoading(false)
       } else {
         // Ambil sesi terbaru untuk mengecek role
         const session = await getSession()
@@ -67,16 +68,35 @@ export default function LoginPage() {
         }
         
         router.refresh()
+        // Kita biarkan isLoading tetap true agar tombol tetap dalam mode memuat saat redirect
       }
     } catch (err) {
       setError("Terjadi kesalahan sistem.")
-    } finally {
       setIsLoading(false)
     }
   }
 
   return (
     <div className="min-h-screen bg-background flex flex-col justify-center py-8 md:py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Global Loading Overlay (When redirecting) */}
+      {isLoading && !error && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/60 backdrop-blur-md animate-in fade-in duration-300">
+           <div className="flex flex-col items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 animate-ping rounded-full bg-primary/20"></div>
+                <div className="relative p-4 bg-card border border-primary/20 rounded-2xl shadow-2xl">
+                   <Store className="h-10 w-10 text-primary animate-pulse" />
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                 <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                    <span className="text-sm font-bold tracking-widest uppercase">Menyiapkan Sesi...</span>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
       {/* Decorative Blobs */}
       <div className="absolute top-[-10%] left-[-10%] w-[300px] h-[300px] bg-primary/20 rounded-full blur-[100px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[300px] h-[300px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
@@ -87,9 +107,7 @@ export default function LoginPage() {
             <Store className="w-10 h-10" />
           </div>
         </div>
-        <h2 className="mt-2 text-center text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-          Masuk ke POS Anda
-        </h2>
+        <h1 className="text-3xl font-black tracking-tighter text-foreground mb-2 text-center">Masuk ke BintangPOS</h1>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-[400px] relative z-10">

@@ -1,6 +1,6 @@
-# ERPPOS - Modern Point of Sale & Inventory System
+# BintangPOS - Modern Point of Sale & Inventory System
 
-ERPPOS adalah solusi Point of Sale (POS) dan manajemen inventori modern yang dibangun dengan teknologi web terkini. Aplikasi ini dirancang untuk memberikan pengalaman pengelolaan bisnis yang mulus, mulai dari kasir, pemantauan stok, hingga kolaborasi dengan supplier.
+BintangPOS adalah solusi Point of Sale (POS) dan manajemen inventori modern yang dibangun dengan teknologi web terkini. Aplikasi ini dirancang untuk memberikan pengalaman pengelolaan bisnis yang mulus, mulai dari kasir, pemantauan stok, hingga kolaborasi dengan supplier.
 
 ![Dashboard Preview](https://raw.githubusercontent.com/adenpribadi/pos-nextjs/main/public/preview.png)
 

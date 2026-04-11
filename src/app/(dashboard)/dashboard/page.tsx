@@ -20,6 +20,8 @@ export default async function AdminDashboardPage() {
   let recentTx: any[] = []
   let pendingShipments = 0
   let approvedShipments = 0
+  let pendingOrdersCount = 0
+  let recentPendingOrders: any[] = []
 
   if (role === "SUPPLIER") {
     // Supplier specific data
@@ -75,8 +77,9 @@ export default async function AdminDashboardPage() {
       })
     }
 
-    // Recent transactions
+    // Recent transactions (PAID)
     const transactions = await prisma.sale.findMany({
+      where: { status: "PAID" },
       take: 5,
       orderBy: { createdAt: "desc" },
       include: { user: true }
@@ -89,6 +92,26 @@ export default async function AdminDashboardPage() {
       amount: Number(tx.totalAmount),
       time: format(tx.createdAt, "HH:mm")
     }))
+
+    // Recent pending orders
+    const pendingOrders = await prisma.sale.findMany({
+      where: { status: "PENDING" },
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      include: { customer: true }
+    })
+
+    recentPendingOrders = pendingOrders.map(tx => ({
+      id: tx.id,
+      receiptNumber: tx.receiptNumber,
+      customerName: tx.customer?.name || 'Pelanggan Umum',
+      amount: Number(tx.totalAmount),
+      time: format(tx.createdAt, "HH:mm")
+    }))
+
+    pendingOrdersCount = await prisma.sale.count({
+      where: { status: "PENDING" }
+    })
   }
 
   return (
@@ -101,6 +124,8 @@ export default async function AdminDashboardPage() {
       recentTx={recentTx}
       pendingShipments={pendingShipments}
       approvedShipments={approvedShipments}
+      pendingOrdersCount={pendingOrdersCount}
+      recentPendingOrders={recentPendingOrders}
     />
   )
 }

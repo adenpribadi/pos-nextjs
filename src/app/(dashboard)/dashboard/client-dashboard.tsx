@@ -2,7 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-import { Package, Users, Banknote, ArrowUpRight } from "lucide-react"
+import { Package, Users, Banknote, ArrowUpRight, Bell, Clock } from "lucide-react"
+import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 interface DashboardProps {
   role?: string
@@ -13,6 +15,8 @@ interface DashboardProps {
   recentTx: Array<{id: string, receiptNumber: string, cashierName: string, amount: number, time: string}>
   pendingShipments: number
   approvedShipments: number
+  pendingOrdersCount?: number
+  recentPendingOrders?: Array<{id: string, receiptNumber: string, customerName: string, amount: number, time: string}>
 }
 
 export function ClientDashboard({ 
@@ -23,7 +27,9 @@ export function ClientDashboard({
   chartData, 
   recentTx,
   pendingShipments,
-  approvedShipments
+  approvedShipments,
+  pendingOrdersCount = 0,
+  recentPendingOrders = []
 }: DashboardProps) {
   const isSupplier = role === "SUPPLIER"
 
@@ -41,23 +47,42 @@ export function ClientDashboard({
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {!isSupplier ? (
-          <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20 shadow-lg shadow-primary/5">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Pendapatan Hari Ini</CardTitle>
-              <Banknote className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">Rp {todayRevenue.toLocaleString('id-ID')}</div>
-              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                <ArrowUpRight className="h-3 w-3 text-emerald-500" />
-                Diperbarui secara real-time
-              </p>
-            </CardContent>
-          </Card>
+          <>
+            <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20 shadow-lg shadow-primary/5">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Pendapatan Hari Ini</CardTitle>
+                <Banknote className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">Rp {todayRevenue.toLocaleString('id-ID')}</div>
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <ArrowUpRight className="h-3 w-3 text-emerald-500" />
+                  Diperbarui secara real-time
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className={cn(
+              "bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-background border-amber-500/20 shadow-lg shadow-amber-500/5 relative overflow-hidden group transition-all hover:bg-amber-500/10",
+              pendingOrdersCount > 0 && "ring-1 ring-amber-500/50"
+            )}>
+              <Link href="/dashboard/orders" className="absolute inset-0 z-10" />
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Antrean Pesanan</CardTitle>
+                <Bell className={cn("h-4 w-4", pendingOrdersCount > 0 ? "text-amber-500 animate-bounce" : "text-muted-foreground")} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{pendingOrdersCount}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Pesanan menunggu pembayaran
+                </p>
+              </CardContent>
+            </Card>
+          </>
         ) : (
-          <Card className="bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-background border-orange-500/20 shadow-lg shadow-orange-500/5">
+          <Card className="bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-background border-orange-500/20 shadow-lg shadow-orange-500/5 col-span-1 md:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Menunggu Persetujuan</CardTitle>
               <ArrowUpRight className="h-4 w-4 text-orange-500" />
@@ -153,32 +178,67 @@ export function ClientDashboard({
             </CardContent>
           </Card>
 
-          {/* Recent Transactions */}
-          <Card className="md:col-span-3">
-            <CardHeader>
-              <CardTitle>Transaksi Terakhir</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {recentTx.length === 0 ? (
-                  <div className="text-sm text-muted-foreground text-center py-4">Belum ada transaksi.</div>
-                ) : (
-                  recentTx.map((tx) => (
-                    <div key={tx.id} className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold leading-none text-foreground">{tx.receiptNumber}</p>
-                        <p className="text-xs text-muted-foreground">Kasir: {tx.cashierName}</p>
+          <div className="md:col-span-3 space-y-6">
+            {/* Recent Pending Orders */}
+            <Card className="border-amber-500/20 bg-amber-500/5">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                   <Bell className="h-4 w-4 text-amber-500" />
+                   Antrean Pesanan
+                </CardTitle>
+                <Link href="/dashboard/orders" className="text-[10px] font-bold text-amber-600 hover:underline uppercase tracking-wider">
+                   Lihat Semua
+                </Link>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentPendingOrders.length === 0 ? (
+                    <div className="text-xs text-muted-foreground/60 py-2">Tidak ada antrean pesanan.</div>
+                  ) : (
+                    recentPendingOrders.map((order) => (
+                      <div key={order.id} className="flex items-center justify-between p-2 rounded-lg bg-background/50 border border-amber-500/10">
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-bold text-foreground truncate max-w-[120px]">{order.customerName}</p>
+                          <p className="text-[10px] font-mono text-muted-foreground">{order.receiptNumber}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-black text-amber-600">Rp {order.amount.toLocaleString('id-ID')}</p>
+                          <p className="text-[9px] text-muted-foreground">{order.time}</p>
+                        </div>
                       </div>
-                      <div className="text-right space-y-1">
-                        <p className="text-sm font-bold text-foreground">Rp {tx.amount.toLocaleString('id-ID')}</p>
-                        <p className="text-xs text-muted-foreground">{tx.time}</p>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Transactions (PAID) */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-bold">Transaksi Berhasil</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentTx.length === 0 ? (
+                    <div className="text-xs text-muted-foreground py-2 text-center">Belum ada transaksi.</div>
+                  ) : (
+                    recentTx.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-semibold leading-none text-foreground">{tx.receiptNumber}</p>
+                          <p className="text-[9px] text-muted-foreground">Oleh: {tx.cashierName}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-bold text-emerald-600">Rp {tx.amount.toLocaleString('id-ID')}</p>
+                          <p className="text-[9px] text-muted-foreground">{tx.time}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
 

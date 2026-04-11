@@ -124,7 +124,7 @@ export default function SettingsPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="store-name">Nama Toko / Outlet</Label>
-                    <Input id="store-name" defaultValue="POS Next Premium" className="bg-background/50" />
+                    <Input id="store-name" defaultValue="BintangPOS Premium" className="bg-background/50" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="tax-rate">Persentase PPN (%)</Label>

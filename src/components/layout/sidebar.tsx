@@ -12,12 +12,16 @@ import {
   CreditCard,
   LineChart,
   ClipboardList,
-  CheckCircle2
+  CheckCircle2,
+  Bell
 } from "lucide-react"
 import { useSession } from "next-auth/react"
+import { getPendingSalesCount } from "@/app/actions/sale"
+import { useState, useEffect } from "react"
 
 export const menuItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "MANAGER", "CASHIER"] },
+  { name: "Antrean Pesanan", href: "/dashboard/orders", icon: Bell, roles: ["ADMIN", "MANAGER", "CASHIER"], showBadge: true },
   { name: "Transaksi / Kasir", href: "/checkout", icon: Store, roles: ["ADMIN", "MANAGER", "CASHIER"] },
   { name: "Manajemen Produk", href: "/dashboard/products", icon: Package, roles: ["ADMIN", "MANAGER"] },
   { name: "Inventori & Stok", href: "/dashboard/inventory", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
@@ -31,6 +35,20 @@ export function Sidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
   const userRole = session?.user?.role || ""
+  const [pendingCount, setPendingCount] = useState(0)
+
+  useEffect(() => {
+    if (userRole === "ADMIN" || userRole === "MANAGER" || userRole === "CASHIER") {
+      getPendingSalesCount().then(setPendingCount)
+      
+      // Auto-refresh every 30 seconds for new orders
+      const interval = setInterval(() => {
+        getPendingSalesCount().then(setPendingCount)
+      }, 30000)
+      
+      return () => clearInterval(interval)
+    }
+  }, [userRole])
 
   const filteredMenuItems = menuItems.filter(item => 
     !item.roles || item.roles.includes(userRole)
@@ -40,10 +58,10 @@ export function Sidebar() {
     <aside className="w-64 h-screen border-r border-border/50 bg-card/50 backdrop-blur-xl flex flex-col hidden md:flex shrink-0 z-20">
       <div className="h-16 flex items-center px-6 border-b border-border/50">
         <Link href="/dashboard" className="flex items-center gap-2 group">
-          <div className="bg-primary/10 p-2 rounded-xl group-hover:bg-primary/20 transition-colors">
-            <Store className="h-5 w-5 text-primary" />
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
+            <Store className="w-5 h-5" />
           </div>
-          <span className="font-bold text-lg tracking-tight text-foreground">ERP<span className="text-primary font-black">POS</span></span>
+          <span className="font-bold text-lg tracking-tight text-foreground">Bintang<span className="text-primary font-black">POS</span></span>
         </Link>
       </div>
 
@@ -67,7 +85,14 @@ export function Sidebar() {
               )}
             >
               <item.icon className={cn("h-4 w-4", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
-              {item.name}
+              <div className="flex-1 flex items-center justify-between">
+                <span>{item.name}</span>
+                {item.showBadge && pendingCount > 0 && (
+                  <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-0.5 rounded-full animate-in zoom-in duration-300">
+                    {pendingCount}
+                  </span>
+                )}
+              </div>
             </Link>
           )
         })}

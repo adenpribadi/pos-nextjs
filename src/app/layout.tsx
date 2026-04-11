@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "POS Next | Premium Point of Sale",
+  title: "BintangPOS | Premium Point of Sale",
   description: "Modern Point of Sale application built with Next.js",
 };
 

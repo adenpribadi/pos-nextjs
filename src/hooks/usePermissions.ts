@@ -11,7 +11,7 @@ export function usePermissions() {
 
   // Hierarki:
   // ADMIN bisa semuanya.
-  // MANAGER bisa fitur-fitur ERP & laporannya, juga kasir (tergantung).
+  // MANAGER bisa fitur-fitur BintangPOS & laporannya, juga kasir (tergantung).
   // CASHIER hanya fitur POS.
 
   const canAccessAdminDashboard = role === "ADMIN"

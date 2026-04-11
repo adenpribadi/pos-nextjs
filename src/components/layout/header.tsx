@@ -41,10 +41,12 @@ export function Header() {
             <div className="h-16 flex items-center px-6 border-b border-border/50">
               <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
               <Link href="/dashboard" className="flex items-center gap-2 group">
-                <div className="bg-primary/10 p-2 rounded-xl group-hover:bg-primary/20 transition-colors">
-                  <Store className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-2">
+                  <div className="bg-primary/10 p-2 rounded-xl">
+                    <Store className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className="font-bold text-lg tracking-tight text-foreground">Bintang<span className="text-primary font-black">POS</span></span>
                 </div>
-                <span className="font-bold text-lg tracking-tight text-foreground">ERP<span className="text-primary font-black">POS</span></span>
               </Link>
             </div>
             <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">

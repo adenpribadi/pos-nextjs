@@ -13,10 +13,10 @@ export default function Home() {
       {/* Navigation */}
       <nav className="h-20 border-b border-border/50 bg-background/50 backdrop-blur-md flex items-center justify-between px-6 md:px-12 z-10">
         <div className="flex items-center gap-2 group cursor-pointer">
-          <div className="bg-primary/10 p-2 rounded-xl group-hover:bg-primary/20 transition-colors">
-            <Store className="h-6 w-6 text-primary" />
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
+            <Store className="w-5 h-5" />
           </div>
-          <span className="font-bold text-xl tracking-tight">ERP<span className="text-primary font-black">POS</span></span>
+          <span className="font-bold text-xl tracking-tight">Bintang<span className="text-primary font-black">POS</span></span>
         </div>
         <div className="flex items-center gap-4">
           <Link href="/login">
@@ -34,12 +34,12 @@ export default function Home() {
       <main className="flex-1 flex flex-col items-center justify-center px-6 text-center z-10 pt-20 pb-32">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50 text-sm font-medium text-muted-foreground mb-8">
           <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          Sistem POS v2.0 Telah Aktif
+          Sistem BintangPOS Telah Aktif
         </div>
         
         <h1 className="text-5xl md:text-7xl font-black tracking-tighter max-w-4xl text-foreground mb-6 leading-[1.1]">
           Kelola Bisnis Lebih Cerdas <br className="hidden md:block" /> 
-          Dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">POS Premium</span>.
+          Dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">BintangPOS Premium</span>.
         </h1>
         
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-12">
@@ -82,7 +82,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-border/50 py-8 bg-muted/10 text-center text-sm text-muted-foreground z-10">
-        <p>&copy; {new Date().getFullYear()} ERP POS Architecture. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} BintangPOS Architecture. All rights reserved.</p>
       </footer>
     </div>
   )

@@ -50,7 +50,7 @@ export default async function ReportsPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Laporan Penjualan</h2>
           <p className="text-muted-foreground mt-1">
-            Data rekam jejak transaksi finansial yang diproses melalui sistem POS.
+            Data rekam jejak transaksi finansial yang diproses melalui sistem BintangPOS.
           </p>
         </div>
       </div>

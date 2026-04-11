@@ -21,10 +21,10 @@ export default async function ShopLayout({
       <header className="h-16 border-b border-border/50 bg-card/40 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30 w-full">
         <div className="flex items-center gap-8">
           <Link href="/store" className="flex items-center gap-2 group">
-            <div className="bg-primary/10 p-2 rounded-xl group-hover:bg-primary/20 transition-colors">
-              <Store className="h-5 w-5 text-primary" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
+              <Store className="w-5 h-5" />
             </div>
-            <span className="font-bold text-lg tracking-tight text-foreground">ERP<span className="text-primary font-black">STORE</span></span>
+            <span className="font-bold text-lg tracking-tight text-foreground">Bintang<span className="text-primary font-black">STORE</span></span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
