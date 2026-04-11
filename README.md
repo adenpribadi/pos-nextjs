@@ -34,6 +34,23 @@ Manajemen hak akses yang ketat berdasarkan peran pengguna:
 - **Supplier**: Akses khusus untuk mengajukan Supply Shipment.
 - **Customer**: Akses ke portal katalog produk.
 
+## 🖥️ Spesifikasi Sistem
+
+Untuk menjalankan **BintangPOS** dengan optimal di lingkungan server (VPS/Cloud), berikut adalah spesifikasi yang disarankan:
+
+### **Minimum Requirement**
+- **CPU**: 1 Core (vCPU)
+- **RAM**: 1 GB
+- **Penyimpanan**: 10 GB (SSD sangat disarankan)
+- **Node.js**: v18.17.0 atau lebih baru
+- **Database**: MySQL 8.0+ atau MariaDB 10.4+
+
+### **Recommended Requirement**
+- **CPU**: 2 Cores atau lebih
+- **RAM**: 2 GB - 4 GB (untuk performa build yang lebih cepat dan menangani trafik tinggi)
+- **Penyimpanan**: 20 GB+ (NVMe SSD)
+- **Runtime**: Node.js v20 (LTS) dengan Process Manager seperti **PM2** atau **Docker**
+
 ## 🛠️ Tech Stack
 
 - **Framework**: [Next.js 15 (App Router)](https://nextjs.org/)
