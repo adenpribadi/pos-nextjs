@@ -28,26 +28,26 @@ async function main() {
 
   const products = [
     // Makanan Berat
-    { name: 'Nasi Goreng Spesial', price: 35000, stock: 20, sku: 'NGS-001', category: 'Makanan Berat' },
-    { name: 'Ayam Bakar Madu', price: 42000, stock: 15, sku: 'ABM-002', category: 'Makanan Berat' },
-    { name: 'Mie Goreng Seafood', price: 38000, stock: 25, sku: 'MGS-003', category: 'Makanan Berat' },
+    { name: 'Nasi Goreng Spesial', price: 35000, costPrice: 20000, stock: 20, sku: 'NGS-001', category: 'Makanan Berat' },
+    { name: 'Ayam Bakar Madu', price: 42000, costPrice: 25000, stock: 15, sku: 'ABM-002', category: 'Makanan Berat' },
+    { name: 'Mie Goreng Seafood', price: 38000, costPrice: 22000, stock: 25, sku: 'MGS-003', category: 'Makanan Berat' },
     
     // Minuman
-    { name: 'Kopi Kenangan Mantan', price: 18000, stock: 50, sku: 'KPM-001', category: 'Minuman' },
-    { name: 'Es Teh Manis', price: 5000, stock: 100, sku: 'ETM-005', category: 'Minuman' },
-    { name: 'Jus Alpukat Kocok', price: 15000, stock: 30, sku: 'JAK-006', category: 'Minuman' },
+    { name: 'Kopi Kenangan Mantan', price: 18000, costPrice: 8000, stock: 50, sku: 'KPM-001', category: 'Minuman' },
+    { name: 'Es Teh Manis', price: 5000, costPrice: 1500, stock: 100, sku: 'ETM-005', category: 'Minuman' },
+    { name: 'Jus Alpukat Kocok', price: 15000, costPrice: 7000, stock: 30, sku: 'JAK-006', category: 'Minuman' },
     
     // Makanan Ringan
-    { name: 'Kentang Goreng Cheese', price: 20000, stock: 35, sku: 'KTG-011', category: 'Makanan Ringan' },
-    { name: 'Cireng Bumbu Rujak', price: 12000, stock: 40, sku: 'CBR-012', category: 'Makanan Ringan' },
+    { name: 'Kentang Goreng Cheese', price: 20000, costPrice: 10000, stock: 35, sku: 'KTG-011', category: 'Makanan Ringan' },
+    { name: 'Cireng Bumbu Rujak', price: 12000, costPrice: 5000, stock: 40, sku: 'CBR-012', category: 'Makanan Ringan' },
     
     // Pencuci Mulut
-    { name: 'Roti Bakar Coklat', price: 15000, stock: 20, sku: 'RBC-021', category: 'Pencuci Mulut' },
-    { name: 'Pisang Keju Susu', price: 18000, stock: 25, sku: 'PKS-022', category: 'Pencuci Mulut' },
+    { name: 'Roti Bakar Coklat', price: 15000, costPrice: 8000, stock: 20, sku: 'RBC-021', category: 'Pencuci Mulut' },
+    { name: 'Pisang Keju Susu', price: 18000, costPrice: 9000, stock: 25, sku: 'PKS-022', category: 'Pencuci Mulut' },
     
     // Bahan Pokok
-    { name: 'Beras Pandan Wangi 5kg', price: 85000, stock: 10, sku: 'BPW-051', category: 'Bahan Pokok' },
-    { name: 'Minyak Goreng 2L', price: 34000, stock: 15, sku: 'MG2-052', category: 'Bahan Pokok' },
+    { name: 'Beras Pandan Wangi 5kg', price: 85000, costPrice: 75000, stock: 10, sku: 'BPW-051', category: 'Bahan Pokok' },
+    { name: 'Minyak Goreng 2L', price: 34000, costPrice: 28000, stock: 15, sku: 'MG2-052', category: 'Bahan Pokok' },
   ];
 
   for (const p of products) {
@@ -55,12 +55,14 @@ async function main() {
       where: { sku: p.sku },
       update: {
         price: p.price,
+        costPrice: p.costPrice,
         stock: p.stock,
         categoryId: categoryMap[p.category],
       },
       create: {
         name: p.name,
         price: p.price,
+        costPrice: p.costPrice,
         stock: p.stock,
         sku: p.sku,
         categoryId: categoryMap[p.category],

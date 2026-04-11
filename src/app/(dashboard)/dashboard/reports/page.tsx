@@ -18,23 +18,31 @@ export default async function ReportsPage() {
   })
 
   // Format data for the client
-  const formattedSales = sales.map(s => ({
-    id: s.id,
-    receiptNumber: s.receiptNumber,
-    date: s.createdAt.toISOString(),
-    amount: Number(s.totalAmount),
-    tax: Number(s.taxAmount),
-    discount: Number(s.discount),
-    paymentMethod: s.paymentMethod !== null ? s.paymentMethod : "-",
-    cashierName: s.user?.name || "-",
-    itemsCount: s.items.length,
-    itemsDetail: s.items.map(i => ({
-      name: i.product.name,
-      qty: i.quantity,
-      price: Number(i.price),
-      total: Number(i.total)
-    }))
-  }))
+  const formattedSales = sales.map(s => {
+    const totalHpp = s.items.reduce((sum, item) => sum + (Number(item.product.costPrice || 0) * item.quantity), 0)
+    const profit = Number(s.totalAmount) - totalHpp
+
+    return {
+      id: s.id,
+      receiptNumber: s.receiptNumber,
+      date: s.createdAt.toISOString(),
+      amount: Number(s.totalAmount),
+      tax: Number(s.taxAmount),
+      discount: Number(s.discount),
+      paymentMethod: s.paymentMethod !== null ? s.paymentMethod : "-",
+      cashierName: s.user?.name || "-",
+      itemsCount: s.items.length,
+      totalHpp,
+      profit,
+      itemsDetail: s.items.map(i => ({
+        name: i.product.name,
+        qty: i.quantity,
+        price: Number(i.price),
+        costPrice: Number(i.product.costPrice || 0),
+        total: Number(i.total)
+      }))
+    }
+  })
 
   return (
     <div className="flex-1 space-y-4">

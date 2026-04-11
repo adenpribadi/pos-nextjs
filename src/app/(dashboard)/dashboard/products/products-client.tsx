@@ -39,6 +39,7 @@ interface ProductColumn {
   name: string
   category: string
   price: number
+  costPrice: number
   stock: number
   status: string
   image?: string | null
@@ -232,88 +233,180 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
       </div>
       
       <CardContent className="p-0">
-        <Table>
-          <TableHeader className="bg-muted/30">
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[80px]">Foto</TableHead>
-              <TableHead className="w-[100px]">SKU</TableHead>
-              <TableHead>Nama Produk</TableHead>
-              <TableHead>Kategori</TableHead>
-              <TableHead className="text-right">Harga</TableHead>
-              <TableHead className="text-center">Stok</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  Tidak ada produk yang ditemukan.
-                </TableCell>
+        {/* View Desktop: Table */}
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader className="bg-muted/30">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[80px]">Foto</TableHead>
+                <TableHead className="w-[100px]">SKU</TableHead>
+                <TableHead>Nama Produk</TableHead>
+                <TableHead>Kategori</TableHead>
+                <TableHead className="text-right">HPP</TableHead>
+                <TableHead className="text-right">Harga Jual</TableHead>
+                <TableHead className="text-center">Stok</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
-            ) : (
-              filteredData.map((item) => (
-                <TableRow key={item.id} className="transition-colors hover:bg-muted/40">
-                  <TableCell>
-                    <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden border border-border/50">
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <Plus className="h-4 w-4 text-muted-foreground/40" />
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{item.sku}</TableCell>
-                  <TableCell className="font-medium text-foreground">{item.name}</TableCell>
-                  <TableCell>{item.category}</TableCell>
-                  <TableCell className="text-right font-mono text-muted-foreground">
-                    Rp {item.price.toLocaleString('id-ID')}
-                  </TableCell>
-                  <TableCell className="text-center font-bold">
-                    <span className={item.stock <= 5 ? "text-destructive" : "text-foreground"}>
-                      {item.stock}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={item.status === "Tersedia" ? "default" : "destructive"} className="bg-primary/20 text-primary hover:bg-primary/30 border-transparent">
-                      {item.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                        <span className="sr-only">Buka menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          className="cursor-pointer"
-                          onClick={() => {
-                            if (!canManageProducts) return toast.error("Akses Ditolak")
-                            setPreviewUrl(null)
-                            setCompressedFile(null)
-                            setEditingProduct(item)
-                          }}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          <span>Edit</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
-                          onClick={() => handleDelete(item.id, item.name)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Hapus</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            </TableHeader>
+            <TableBody>
+              {filteredData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                    Tidak ada produk yang ditemukan.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filteredData.map((item) => (
+                  <TableRow key={item.id} className="transition-colors hover:bg-muted/40">
+                    <TableCell>
+                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden border border-border/50">
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <Plus className="h-4 w-4 text-muted-foreground/40" />
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{item.sku}</TableCell>
+                    <TableCell className="font-medium text-foreground">{item.name}</TableCell>
+                    <TableCell>{item.category}</TableCell>
+                    <TableCell className="text-right font-mono text-muted-foreground/60 text-xs">
+                      Rp {item.costPrice.toLocaleString('id-ID')}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-foreground font-semibold">
+                      Rp {item.price.toLocaleString('id-ID')}
+                    </TableCell>
+                    <TableCell className="text-center font-bold">
+                      <span className={item.stock <= 5 ? "text-destructive" : "text-foreground"}>
+                        {item.stock}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={item.status === "Tersedia" ? "default" : "destructive"} className="bg-primary/20 text-primary hover:bg-primary/30 border-transparent">
+                        {item.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                          <span className="sr-only">Buka menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            className="cursor-pointer"
+                            onClick={() => {
+                              if (!canManageProducts) return toast.error("Akses Ditolak")
+                              setPreviewUrl(null)
+                              setCompressedFile(null)
+                              setEditingProduct(item)
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            <span>Edit</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                            onClick={() => handleDelete(item.id, item.name)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Hapus</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* View Mobile: Cards */}
+        <div className="md:hidden grid grid-cols-1 gap-4 p-4">
+          {filteredData.length === 0 ? (
+            <div className="h-24 flex items-center justify-center text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border/50">
+              Tidak ada produk ditemukan.
+            </div>
+          ) : (
+            filteredData.map((item) => (
+              <div key={item.id} className="bg-background/50 border border-border/50 rounded-2xl p-4 space-y-4 shadow-sm relative">
+                <div className="flex items-start gap-4">
+                  <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center overflow-hidden border border-border/50 shrink-0">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <Plus className="h-6 w-6 text-muted-foreground/20" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between">
+                      <div className="truncate">
+                        <h3 className="font-bold text-foreground truncate">{item.name}</h3>
+                        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{item.sku}</p>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-muted/50 hover:bg-muted outline-none">
+                          <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              if (!canManageProducts) return toast.error("Akses Ditolak")
+                              setPreviewUrl(null)
+                              setCompressedFile(null)
+                              setEditingProduct(item)
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" /> Edit Produk
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                            onClick={() => handleDelete(item.id, item.name)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="mt-1">
+                      <Badge variant="outline" className="text-[10px] h-5 py-0 bg-primary/5 text-primary border-primary/20">
+                        {item.category}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border/50">
+                   <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Stok Fisik</p>
+                      <p className={`text-lg font-black ${item.stock <= 5 ? "text-destructive animate-pulse" : "text-foreground"}`}>
+                        {item.stock} <span className="text-[10px] font-normal text-muted-foreground">Unit</span>
+                      </p>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Status</p>
+                      <Badge variant={item.status === "Tersedia" ? "default" : "destructive"} className="h-6">
+                        {item.status}
+                      </Badge>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3 rounded-xl">
+                   <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Harga Beli</p>
+                      <p className="text-xs font-mono text-muted-foreground/80">Rp {item.costPrice.toLocaleString('id-ID')}</p>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-[10px] text-primary uppercase font-bold">Harga Jual</p>
+                      <p className="text-sm font-bold text-foreground">Rp {item.price.toLocaleString('id-ID')}</p>
+                   </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </CardContent>
 
       <Dialog open={isAddOpen} onOpenChange={(open) => {
@@ -382,13 +475,17 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label htmlFor="costPrice">Harga Beli / HPP (Rp)</Label>
+                <Input id="costPrice" name="costPrice" type="number" placeholder="15000" min="0" />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="price">Harga Jual (Rp) <span className="text-destructive">*</span></Label>
                 <Input id="price" name="price" type="number" placeholder="25000" min="0" required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="stock">Stok Awal Fisik <span className="text-destructive">*</span></Label>
-                <Input id="stock" name="stock" type="number" placeholder="50" min="0" required />
-              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stock">Stok Awal Fisik <span className="text-destructive">*</span></Label>
+              <Input id="stock" name="stock" type="number" placeholder="50" min="0" required />
             </div>
             <DialogFooter className="mt-6">
               <Button type="button" variant="ghost" onClick={() => setIsAddOpen(false)}>
@@ -468,13 +565,17 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="edit-costPrice">Harga Beli / HPP (Rp)</Label>
+                  <Input id="edit-costPrice" name="costPrice" type="number" defaultValue={editingProduct.costPrice} min="0" />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="edit-price">Harga Jual (Rp) <span className="text-destructive">*</span></Label>
                   <Input id="edit-price" name="price" type="number" defaultValue={editingProduct.price} min="0" required />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-stock">Stok (Ubah via Inventori)</Label>
-                  <Input id="edit-stock" type="number" value={editingProduct.stock} disabled />
-                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-stock">Stok (Ubah via Inventori)</Label>
+                <Input id="edit-stock" type="number" value={editingProduct.stock} disabled />
               </div>
               <DialogFooter className="mt-6">
                 <Button type="button" variant="ghost" onClick={() => setEditingProduct(null)}>

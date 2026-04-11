@@ -19,6 +19,7 @@ export async function createProduct(formData: FormData) {
     const name = formData.get("name") as string
     const sku = formData.get("sku") as string
     const price = parseFloat(formData.get("price") as string)
+    const costPrice = formData.get("costPrice") ? parseFloat(formData.get("costPrice") as string) : null
     const stock = parseInt(formData.get("stock") as string)
     const categoryId = formData.get("categoryId") as string || null
     
@@ -79,6 +80,7 @@ export async function createProduct(formData: FormData) {
           name,
           sku,
           price,
+          costPrice,
           stock,
           image: imagePath,
           categoryId: categoryId === "" ? null : categoryId,
@@ -121,6 +123,7 @@ export async function updateProduct(formData: FormData) {
     const name = formData.get("name") as string
     const sku = formData.get("sku") as string
     const price = parseFloat(formData.get("price") as string)
+    const costPrice = formData.get("costPrice") ? parseFloat(formData.get("costPrice") as string) : null
     const categoryId = formData.get("categoryId") as string || null
 
     // Proses File Upload (Sama dengan create)
@@ -181,6 +184,7 @@ export async function updateProduct(formData: FormData) {
         name,
         sku,
         price,
+        costPrice,
         ...(imagePath !== undefined && { image: imagePath }),
         categoryId: categoryId === "" ? null : categoryId,
       }

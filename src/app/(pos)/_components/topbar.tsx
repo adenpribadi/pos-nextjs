@@ -23,15 +23,21 @@ export function TopBar() {
         </div>
         
         {canAccessManagerDashboard && (
-          <Link href="/dashboard" passHref>
-            <Button variant="outline" size="sm" className="hidden sm:flex items-center gap-2">
+          <Link href="/dashboard" passHref title="Ke Dashboard Admin">
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4" />
-              Dashboard Admin
+              <span className="hidden sm:inline">Dashboard Admin</span>
             </Button>
           </Link>
         )}
 
-        <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: '/login' })} className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => signOut({ callbackUrl: '/login' })} 
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
+          title="Keluar"
+        >
           <LogOut className="h-4 w-4 sm:mr-2" />
           <span className="hidden sm:inline">Keluar</span>
         </Button>

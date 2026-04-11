@@ -26,6 +26,7 @@ export default async function ProductsPage() {
     name: product.name,
     category: product.category?.name || "Tidak ada kategori",
     price: Number(product.price),
+    costPrice: product.costPrice ? Number(product.costPrice) : 0,
     stock: product.stock,
     status: product.stock > 0 ? "Tersedia" : "Habis",
     image: product.image,
