@@ -46,6 +46,7 @@ export default async function StorePage() {
   const serializedProducts = products.map((p) => ({
     ...p,
     price: Number(p.price),
+    costPrice: p.costPrice ? Number(p.costPrice) : 0,
   }))
 
   return (
