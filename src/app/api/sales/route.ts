@@ -1,0 +1,100 @@
+import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
+import prisma from "@/lib/db"
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const userId = session.user.id
+
+    const body = await request.json()
+    const { items, taxAmount, totalAmount, discount, paymentMethod } = body
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: "Keranjang kosong" }, { status: 400 })
+    }
+
+    // Gunakan Prisma Interactive Transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Generate Receipt Number MMDDYY-RANDOM
+      const datePart = new Date().toISOString().slice(2, 10).replace(/-/g, "")
+      const randomPart = Math.floor(1000 + Math.random() * 9000)
+      const receiptNumber = `POS-${datePart}-${randomPart}`
+
+      // 2. Prepare inventory check & updates
+      let calculatedTotal = 0
+
+      for (const item of items) {
+        // Cek stok terbaru secara real-time sebelum memotong
+        const product = await tx.product.findUnique({
+          where: { id: item.productId }
+        })
+
+        if (!product) {
+          throw new Error(`Produk dengan ID ${item.productId} tidak ditemukan.`)
+        }
+
+        if (product.trackStock && product.stock < item.quantity) {
+          throw new Error(`Stok tidak mencukupi untuk ${product.name}. Tersisa: ${product.stock}`)
+        }
+
+        // Potong stok
+        if (product.trackStock) {
+          await tx.product.update({
+            where: { id: product.id },
+            data: { stock: product.stock - item.quantity }
+          })
+        }
+
+        // Catat di InventoryTransaction
+        await tx.inventoryTransaction.create({
+          data: {
+            productId: product.id,
+            type: "SALE",
+            quantity: -item.quantity,
+            notes: `Penjualan dari No Struk: ${receiptNumber}`,
+            userId: userId,
+          }
+        })
+
+        const itemTotal = (item.price - item.discount) * item.quantity
+        calculatedTotal += itemTotal
+      }
+
+      // 3. Buat entity Sale
+      const sale = await tx.sale.create({
+        data: {
+          receiptNumber,
+          totalAmount: totalAmount,
+          taxAmount: taxAmount,
+          discount: discount,
+          status: "PAID", // Status langsung PAID karena ini POS
+          paymentMethod: paymentMethod,
+          userId: userId,
+          items: {
+            create: items.map((item: any) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price,
+              discount: item.discount,
+              total: (item.price - item.discount) * item.quantity,
+            }))
+          }
+        }
+      })
+
+      return sale
+    })
+
+    return NextResponse.json({ success: true, sale: result }, { status: 201 })
+  } catch (error: any) {
+    console.error("Kesalahan saat checkout:", error)
+    return NextResponse.json({ error: error.message || "Terjadi kesalahan pada server" }, { status: 500 })
+  }
+}
