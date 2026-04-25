@@ -14,7 +14,7 @@ type Review = {
   sale: {
     receiptNumber: string
     totalAmount: number
-    customer: { name: string; email: string } | null
+    customer: { name: string; email: string | null } | null
     items: { product: { name: string } }[]
     _count: { items: number }
   }

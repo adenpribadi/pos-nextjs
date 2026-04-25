@@ -14,7 +14,8 @@ import {
   ClipboardList,
   CheckCircle2,
   Bell,
-  Star
+  Star,
+  Ticket
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { getPendingSalesCount } from "@/app/actions/sale"
@@ -27,6 +28,7 @@ export const menuItems = [
   { name: "Manajemen Produk", href: "/dashboard/products", icon: Package, roles: ["ADMIN", "MANAGER"] },
   { name: "Inventori & Stok", href: "/dashboard/inventory", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
   { name: "Supply Shipment", href: "/dashboard/inventory/supply-shipments", icon: CheckCircle2, roles: ["ADMIN", "MANAGER", "SUPPLIER"] },
+  { name: "Manajemen Promo", href: "/dashboard/promos", icon: Ticket, roles: ["ADMIN", "MANAGER"] },
   { name: "Data Pelanggan", href: "/dashboard/customers", icon: Users, roles: ["ADMIN", "MANAGER", "CASHIER"] },
   { name: "Rating & Ulasan", href: "/dashboard/reviews", icon: Star, roles: ["ADMIN", "MANAGER"] },
   { name: "Laporan Keuangan", href: "/dashboard/reports", icon: LineChart, roles: ["ADMIN", "MANAGER"] },

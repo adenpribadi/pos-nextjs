@@ -22,6 +22,9 @@ export default async function OrdersPage() {
     customerName: sale.customer?.name || "Pelanggan Umum",
     date: sale.createdAt.toISOString(),
     total: Number(sale.totalAmount),
+    discount: Number(sale.discount),
+    promoCode: sale.promo?.code || null,
+    promoDescription: sale.promo?.description || null,
     itemsCount: sale.items.length,
     paymentMethod: sale.paymentMethod,
     items: sale.items.map(item => ({

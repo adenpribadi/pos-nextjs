@@ -10,7 +10,8 @@ import {
   ChevronRight, 
   ShoppingBag,
   MoreVertical,
-  AlertCircle
+  AlertCircle,
+  Ticket
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -43,6 +44,9 @@ interface PendingOrder {
   customerName: string
   date: string
   total: number
+  discount: number
+  promoCode: string | null
+  promoDescription: string | null
   itemsCount: number
   paymentMethod: string
   items: OrderItem[]
@@ -106,10 +110,16 @@ export function OrdersClient({ initialData }: { initialData: PendingOrder[] }) {
                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] font-mono tracking-tighter">
                           {order.receiptNumber}
                        </Badge>
-                       <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-transparent animate-pulse text-[10px] uppercase font-bold">
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-transparent animate-pulse text-[10px] uppercase font-bold">
                           Pending
-                       </Badge>
-                    </div>
+                        </Badge>
+                        {order.promoCode && (
+                          <Badge className="bg-emerald-500 text-white border-transparent text-[10px] font-black uppercase flex items-center gap-1">
+                            <Ticket className="h-2.5 w-2.5" />
+                            {order.promoCode}
+                          </Badge>
+                        )}
+                      </div>
                     <CardTitle className="text-lg font-black">{order.customerName}</CardTitle>
                   </div>
                   <div className="text-right">
@@ -140,6 +150,16 @@ export function OrdersClient({ initialData }: { initialData: PendingOrder[] }) {
                      </div>
                    ))}
                 </div>
+
+                 {order.discount > 0 && (
+                   <div className="flex justify-between items-center text-[11px] font-black text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-100">
+                     <span className="flex items-center gap-1">
+                       <Ticket className="h-3 w-3" />
+                       Potongan Promo
+                     </span>
+                     <span>- Rp {order.discount.toLocaleString("id-ID")}</span>
+                   </div>
+                 )}
               </CardContent>
               <CardFooter className="gap-2 pt-2 pb-4">
                 <Button 

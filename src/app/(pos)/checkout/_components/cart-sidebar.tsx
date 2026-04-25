@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from "react"
 import { useCart } from "@/hooks/useCart"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Trash2, Plus, Minus, ShoppingCart, Loader2, ArrowRight, User, Search, X, ChevronDown, Banknote, CreditCard, QrCode, Receipt, UserPlus, Check } from "lucide-react"
+import { Trash2, Plus, Minus, ShoppingCart, Loader2, ArrowRight, User, Search, X, ChevronDown, Banknote, CreditCard, QrCode, Receipt, UserPlus, Check, Ticket } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
 import { getStoreSettings } from "@/app/actions/settings"
+import { validatePromoCode } from "@/app/actions/promo"
 import { cn } from "@/lib/utils"
 
 type Customer = { id: string; name: string; phone: string | null; email: string | null }
@@ -24,6 +25,7 @@ export function CartSidebar() {
   const {
     items, removeItem, updateQuantity, clearCart,
     getSubtotal, getTaxAmount, getTotalAmount, setTaxRate,
+    discountGlobal, setGlobalDiscount, appliedPromo, setAppliedPromo
   } = useCart()
 
   // State kasir
@@ -45,6 +47,10 @@ export function CartSidebar() {
 
   // Tahap checkout
   const [step, setStep] = useState<"cart" | "payment">("cart")
+
+  // Promo state
+  const [promoInput, setPromoInput] = useState("")
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false)
 
   const total = hasMounted ? getTotalAmount() : 0
   const cashPaid = parseFloat(cashInput.replace(/\./g, "")) || 0
@@ -98,9 +104,10 @@ export function CartSidebar() {
           items: items.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price, discount: i.discount })),
           taxAmount: getTaxAmount(),
           totalAmount: getTotalAmount(),
-          discount: 0,
+          discount: discountGlobal,
           paymentMethod,
           customerId: selectedCustomer?.id || null,
+          promoId: appliedPromo?.id || null,
         }),
       })
 
@@ -155,6 +162,69 @@ export function CartSidebar() {
           )}
         </div>
       </div>
+
+      {/* ── PROMO CODE (Cart Step Only) ── */}
+      {step === "cart" && hasItems && (
+        <div className="px-4 py-3 border-b border-border/30 bg-muted/5 shrink-0">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Ticket className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+              <Input 
+                placeholder="MASUKKAN KODE PROMO" 
+                value={promoInput}
+                onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                className={cn(
+                  "h-10 pl-8 text-[11px] font-black font-mono tracking-widest bg-background border-border/50",
+                  appliedPromo && "text-emerald-600 border-emerald-500/50 bg-emerald-50/30"
+                )}
+                disabled={!!appliedPromo || isValidatingPromo}
+              />
+              {appliedPromo && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase">
+                  <Check className="h-2.5 w-2.5" />
+                  Aktif
+                </div>
+              )}
+            </div>
+            
+            {appliedPromo ? (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-10 px-3 border-destructive/20 text-destructive hover:bg-destructive/10"
+                onClick={() => {
+                  setAppliedPromo(null)
+                  setGlobalDiscount(0)
+                  setPromoInput("")
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="h-10 px-4 font-black text-[11px] uppercase tracking-wider shadow-sm"
+                onClick={async () => {
+                  setIsValidatingPromo(true)
+                  const res = await validatePromoCode(promoInput, getSubtotal(), selectedCustomer?.id)
+                  if (res.success && res.data) {
+                    setAppliedPromo({ id: res.data.id, code: res.data.code })
+                    setGlobalDiscount(res.data.discountAmount)
+                    toast.success("Promo Berhasil!", { description: `Diskon Rp ${res.data.discountAmount.toLocaleString("id-ID")} diterapkan.` })
+                  } else {
+                    toast.error("Promo Gagal", { description: res.error })
+                  }
+                  setIsValidatingPromo(false)
+                }}
+                disabled={!promoInput || isValidatingPromo}
+              >
+                {isValidatingPromo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Gunakan"}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {step === "cart" && (
         <>
@@ -323,6 +393,13 @@ export function CartSidebar() {
                 <span>Subtotal</span>
                 <span className="font-mono">Rp {hasMounted ? getSubtotal().toLocaleString("id-ID") : "0"}</span>
               </div>
+              
+              {hasMounted && discountGlobal > 0 && (
+                <div className="flex justify-between text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded-lg">
+                  <span className="flex items-center gap-1"><Ticket className="h-3 w-3" /> Diskon Promo</span>
+                  <span className="font-mono">- Rp {discountGlobal.toLocaleString("id-ID")}</span>
+                </div>
+              )}
               {taxEnabled && (
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{taxLabel}</span>

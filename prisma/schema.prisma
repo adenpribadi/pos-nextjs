@@ -19,6 +19,11 @@ enum Role {
   SUPPLIER
 }
 
+enum PromoType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -190,6 +195,9 @@ model Sale {
   items         SaleItem[]
   review        Review?
   
+  promoId       String?
+  promo         Promo?     @relation(fields: [promoId], references: [id])
+  
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 }
@@ -246,4 +254,29 @@ model Review {
   comment    String?  @db.Text
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// =======================
+// PROMOS
+// =======================
+
+model Promo {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  description String?
+  type        PromoType @default(PERCENTAGE)
+  value       Decimal   @db.Decimal(10, 2)
+  minPurchase Decimal   @default(0) @db.Decimal(10, 2)
+  maxDiscount Decimal?  @db.Decimal(10, 2)
+  startDate   DateTime?
+  endDate     DateTime?
+  usageLimit  Int?      
+  usageCount  Int       @default(0)
+  limitPerCustomer Int?      @default(1)
+  isActive    Boolean   @default(true)
+  
+  sales       Sale[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

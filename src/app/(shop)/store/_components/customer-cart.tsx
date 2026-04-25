@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ShoppingCart, Trash2, ArrowRight, Loader2, CreditCard, Banknote, QrCode, Copy, CheckCheck, Building2 } from "lucide-react"
+import { ShoppingCart, Trash2, ArrowRight, Loader2, CreditCard, Banknote, QrCode, Copy, CheckCheck, Building2, Ticket, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/hooks/useCart"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet"
@@ -10,6 +10,8 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { getStoreSettings } from "@/app/actions/settings"
+import { validatePromoCode } from "@/app/actions/promo"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 type BankInfo = {
@@ -24,7 +26,11 @@ const PAYMENT_METHODS = [
 ]
 
 export function CustomerCart() {
-  const { items, getTotalAmount, getSubtotal, getTaxAmount, clearCart, getTotalItems, removeItem, setTaxRate } = useCart()
+  const { 
+    items, getTotalAmount, getSubtotal, getTaxAmount, clearCart, 
+    getTotalItems, removeItem, setTaxRate,
+    discountGlobal, setGlobalDiscount, appliedPromo, setAppliedPromo
+  } = useCart()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [taxEnabled, setTaxEnabled] = useState(true)
@@ -32,6 +38,8 @@ export function CustomerCart() {
   const [paymentMethod, setPaymentMethod] = useState("TRANSFER")
   const [bankInfo, setBankInfo] = useState<BankInfo | null>(null)
   const [copied, setCopied] = useState(false)
+  const [promoInput, setPromoInput] = useState("")
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -70,8 +78,9 @@ export function CustomerCart() {
           items,
           totalAmount: getTotalAmount(),
           taxAmount: getTaxAmount(),
-          discount: 0,
+          discount: discountGlobal,
           paymentMethod,
+          promoId: appliedPromo?.id || null,
         }),
       })
 
@@ -158,12 +167,82 @@ export function CustomerCart() {
 
           {items.length > 0 && (
             <div className="p-6 bg-muted/30 border-t space-y-4">
+              {/* Promo Input */}
+              <div className="space-y-2">
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Punya Kode Promo?</p>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Ticket className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                    <Input 
+                      placeholder="KODE PROMO" 
+                      value={promoInput}
+                      onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                      className={cn(
+                        "h-10 pl-8 text-[11px] font-black font-mono tracking-widest bg-background border-border/50",
+                        appliedPromo && "text-emerald-600 border-emerald-500/50 bg-emerald-50/30"
+                      )}
+                      disabled={!!appliedPromo || isValidatingPromo}
+                    />
+                    {appliedPromo && (
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase">
+                        <Check className="h-2.5 w-2.5" />
+                        Aktif
+                      </div>
+                    )}
+                  </div>
+                  
+                  {appliedPromo ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-10 px-3 border-destructive/20 text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        setAppliedPromo(null)
+                        setGlobalDiscount(0)
+                        setPromoInput("")
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      className="h-10 px-4 font-black text-[11px] uppercase tracking-wider"
+                      onClick={async () => {
+                        if (!promoInput) return
+                        setIsValidatingPromo(true)
+                        const res = await validatePromoCode(promoInput, getSubtotal())
+                        if (res.success && res.data) {
+                          setAppliedPromo({ id: res.data.id, code: res.data.code })
+                          setGlobalDiscount(res.data.discountAmount)
+                          toast.success("Promo Berhasil!", { description: `Diskon Rp ${res.data.discountAmount.toLocaleString("id-ID")} diterapkan.` })
+                        } else {
+                          toast.error("Promo Gagal", { description: res.error })
+                        }
+                        setIsValidatingPromo(false)
+                      }}
+                      disabled={!promoInput || isValidatingPromo}
+                    >
+                      {isValidatingPromo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Gunakan"}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               {/* Ringkasan harga */}
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span>Rp {getSubtotal().toLocaleString("id-ID")}</span>
                 </div>
+                
+                {discountGlobal > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-bold">
+                    <span className="flex items-center gap-1"><Ticket className="h-3.5 w-3.5" /> Diskon Promo</span>
+                    <span>- Rp {discountGlobal.toLocaleString("id-ID")}</span>
+                  </div>
+                )}
                 {taxEnabled && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{taxLabel}</span>

@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const userRole = session.user.role
 
     const body = await request.json()
-    const { items, taxAmount, totalAmount, discount, paymentMethod, customerId: bodyCustomerId, notes } = body
+    const { items, taxAmount, totalAmount, discount, paymentMethod, customerId: bodyCustomerId, notes, promoId } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Keranjang kosong" }, { status: 400 })
@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
           paymentMethod: paymentMethod,
           userId: userId,
           customerId: customerId,
+          promoId: promoId || null,
           items: {
             create: items.map((item: any) => ({
               productId: item.productId,
@@ -99,6 +100,14 @@ export async function POST(request: NextRequest) {
           }
         }
       })
+
+      // 4. Update Promo usage count if any
+      if (promoId) {
+        await tx.promo.update({
+          where: { id: promoId },
+          data: { usageCount: { increment: 1 } }
+        })
+      }
 
       return sale
     })

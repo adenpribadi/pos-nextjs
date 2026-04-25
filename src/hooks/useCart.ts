@@ -17,6 +17,7 @@ interface CartStore {
   items: CartItem[]
   taxRate: number // Default tax rate in decimal, e.g., 0.11 for 11%
   discountGlobal: number // Global order discount
+  appliedPromo: { id: string, code: string } | null // Active promo info
   
   // Actions
   addItem: (product: Omit<CartItem, 'id' | 'quantity' | 'discount'>) => void
@@ -24,6 +25,7 @@ interface CartStore {
   updateQuantity: (productId: string, quantity: number) => void
   updateItemDiscount: (productId: string, discount: number) => void
   setGlobalDiscount: (discount: number) => void
+  setAppliedPromo: (promo: { id: string, code: string } | null) => void
   setTaxRate: (rate: number) => void
   clearCart: () => void
 
@@ -40,6 +42,7 @@ export const useCart = create<CartStore>()(
       items: [],
       taxRate: 0.11, // 11% default PPN
       discountGlobal: 0,
+      appliedPromo: null,
 
       addItem: (product) => {
         const state = get()
@@ -123,8 +126,9 @@ export const useCart = create<CartStore>()(
       },
 
       setGlobalDiscount: (discount) => set({ discountGlobal: Math.max(0, discount) }),
+      setAppliedPromo: (promo) => set({ appliedPromo: promo }),
       setTaxRate: (rate) => set({ taxRate: Math.max(0, rate) }),
-      clearCart: () => set({ items: [], discountGlobal: 0 }),
+      clearCart: () => set({ items: [], discountGlobal: 0, appliedPromo: null }),
 
       getSubtotal: () => {
         return get().items.reduce((total, item) => {

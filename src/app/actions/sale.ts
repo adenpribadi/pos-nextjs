@@ -15,6 +15,7 @@ export async function getPendingSales() {
       include: {
         customer: true,
         user: true,
+        promo: true, // Sertakan info promo
         items: {
           include: {
             product: true
