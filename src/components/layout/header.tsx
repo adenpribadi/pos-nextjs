@@ -45,14 +45,18 @@ export function Header() {
                   <div className="bg-primary/10 p-2 rounded-xl">
                     <Store className="h-5 w-5 text-primary" />
                   </div>
-                  <span className="font-bold text-lg tracking-tight text-foreground">Bintang<span className="text-primary font-black">POS</span></span>
+                  <span className="font-bold text-lg tracking-tight text-foreground">Warung<span className="text-primary font-black">Bintang</span></span>
                 </div>
               </Link>
             </div>
             <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-2">Menu Utama</div>
               {filteredMenuItems.map((item) => {
-                const isActive = pathname === item.href || (pathname?.startsWith(`${item.href}/`) && item.href !== "/dashboard")
+                const isActive = pathname === item.href || (
+                  pathname?.startsWith(`${item.href}/`) && 
+                  item.href !== "/dashboard" &&
+                  !menuItems.some(m => m.href !== item.href && pathname.startsWith(m.href))
+                )
                 return (
                   <Link
                     key={item.href}

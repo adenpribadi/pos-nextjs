@@ -13,7 +13,8 @@ import {
   LineChart,
   ClipboardList,
   CheckCircle2,
-  Bell
+  Bell,
+  Star
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { getPendingSalesCount } from "@/app/actions/sale"
@@ -27,6 +28,7 @@ export const menuItems = [
   { name: "Inventori & Stok", href: "/dashboard/inventory", icon: ClipboardList, roles: ["ADMIN", "MANAGER"] },
   { name: "Supply Shipment", href: "/dashboard/inventory/supply-shipments", icon: CheckCircle2, roles: ["ADMIN", "MANAGER", "SUPPLIER"] },
   { name: "Data Pelanggan", href: "/dashboard/customers", icon: Users, roles: ["ADMIN", "MANAGER", "CASHIER"] },
+  { name: "Rating & Ulasan", href: "/dashboard/reviews", icon: Star, roles: ["ADMIN", "MANAGER"] },
   { name: "Laporan Keuangan", href: "/dashboard/reports", icon: LineChart, roles: ["ADMIN", "MANAGER"] },
   { name: "Pengaturan", href: "/dashboard/settings", icon: Settings, roles: ["ADMIN", "MANAGER", "CASHIER", "SUPPLIER"] },
 ]
@@ -61,7 +63,7 @@ export function Sidebar() {
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
             <Store className="w-5 h-5" />
           </div>
-          <span className="font-bold text-lg tracking-tight text-foreground">Bintang<span className="text-primary font-black">POS</span></span>
+          <span className="font-bold text-lg tracking-tight text-foreground">Warung<span className="text-primary font-black">Bintang</span></span>
         </Link>
       </div>
 

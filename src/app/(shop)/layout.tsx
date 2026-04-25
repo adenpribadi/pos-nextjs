@@ -24,12 +24,12 @@ export default async function ShopLayout({
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
               <Store className="w-5 h-5" />
             </div>
-            <span className="font-bold text-lg tracking-tight text-foreground">Bintang<span className="text-primary font-black">STORE</span></span>
+            <span className="font-bold text-lg tracking-tight text-foreground">Warung<span className="text-primary font-black">Bintang</span></span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
-            <Link 
-              href="/store" 
+            <Link
+              href="/store"
               className={cn(
                 "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
                 "hover:bg-primary/10 hover:text-primary text-muted-foreground"

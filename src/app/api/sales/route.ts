@@ -15,19 +15,19 @@ export async function POST(request: NextRequest) {
     const userRole = session.user.role
 
     const body = await request.json()
-    const { items, taxAmount, totalAmount, discount, paymentMethod } = body
+    const { items, taxAmount, totalAmount, discount, paymentMethod, customerId: bodyCustomerId, notes } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Keranjang kosong" }, { status: 400 })
     }
 
-    // Jika user adalah CUSTOMER, kita harus mencari entitas Customer yang sesuai
-    let customerId = null
-    if (userRole === "CUSTOMER") {
+    // Jika user adalah CUSTOMER, auto-detect; jika kasir, gunakan customerId dari body
+    let customerId: string | null = bodyCustomerId || null
+    if (userRole === "CUSTOMER" && !customerId) {
       const customer = await prisma.customer.findFirst({
         where: { email: session.user.email || "" }
       })
-      customerId = customer?.id
+      customerId = customer?.id || null
     }
 
     // Gunakan Prisma Interactive Transaction

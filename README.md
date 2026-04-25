@@ -1,6 +1,6 @@
-# BintangPOS - Modern Point of Sale & Inventory System
+# WarungBintang - Modern Point of Sale & Inventory System
 
-BintangPOS adalah solusi Point of Sale (POS) dan manajemen inventori modern yang dibangun dengan teknologi web terkini. Aplikasi ini dirancang untuk memberikan pengalaman pengelolaan bisnis yang mulus, mulai dari kasir, pemantauan stok, hingga kolaborasi dengan supplier.
+WarungBintang adalah solusi Point of Sale (POS) dan manajemen inventori modern yang dibangun dengan teknologi web terkini. Aplikasi ini dirancang untuk memberikan pengalaman pengelolaan bisnis yang mulus, mulai dari kasir, pemantauan stok, hingga kolaborasi dengan supplier.
 
 ![Dashboard Preview](https://raw.githubusercontent.com/adenpribadi/pos-nextjs/main/public/preview.png)
 
@@ -36,7 +36,7 @@ Manajemen hak akses yang ketat berdasarkan peran pengguna:
 
 ## 🖥️ Spesifikasi Sistem
 
-Untuk menjalankan **BintangPOS** dengan optimal di lingkungan server (VPS/Cloud), berikut adalah spesifikasi yang disarankan:
+Untuk menjalankan **WarungBintang** dengan optimal di lingkungan server (VPS/Cloud), berikut adalah spesifikasi yang disarankan:
 
 ### **Minimum Requirement**
 - **CPU**: 1 Core (vCPU)

@@ -11,11 +11,12 @@ export function usePermissions() {
 
   // Hierarki:
   // ADMIN bisa semuanya.
-  // MANAGER bisa fitur-fitur BintangPOS & laporannya, juga kasir (tergantung).
+  // MANAGER bisa fitur-fitur WarungBintang & laporannya, juga kasir (tergantung).
   // CASHIER hanya fitur POS.
 
   const canAccessAdminDashboard = role === "ADMIN"
   const canAccessManagerDashboard = role === "ADMIN" || role === "MANAGER"
+  const canAccessDashboard = role === "ADMIN" || role === "MANAGER" || role === "CASHIER"
   const canAccessPOS = role === "ADMIN" || role === "MANAGER" || role === "CASHIER"
 
   const canManageUsers = role === "ADMIN"
@@ -27,6 +28,7 @@ export function usePermissions() {
     isLoading,
     canAccessAdminDashboard,
     canAccessManagerDashboard,
+    canAccessDashboard,
     canAccessPOS,
     canManageUsers,
     canManageProducts,

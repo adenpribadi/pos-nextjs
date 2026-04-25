@@ -107,7 +107,7 @@ export default function LoginPage() {
             <Store className="w-10 h-10" />
           </div>
         </div>
-        <h1 className="text-3xl font-black tracking-tighter text-foreground mb-2 text-center">Masuk ke BintangPOS</h1>
+        <h1 className="text-3xl font-black tracking-tighter text-foreground mb-2 text-center">Masuk ke WarungBintang</h1>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-[400px] relative z-10">

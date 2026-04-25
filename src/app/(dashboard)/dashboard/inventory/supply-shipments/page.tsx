@@ -42,10 +42,20 @@ export default async function SupplyShipmentsPage() {
       },
       supplier: {
         select: { name: true }
+      },
+      admin: {
+        select: { name: true }
       }
     },
     orderBy: { createdAt: "desc" }
   })
+
+  // Fetch all suppliers for Admin/Manager selection
+  const suppliers = isAdmin ? await prisma.user.findMany({
+    where: { role: "SUPPLIER" },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" }
+  }) : []
 
   return (
     <div className="flex-1 space-y-4">
@@ -65,6 +75,7 @@ export default async function SupplyShipmentsPage() {
       <SupplyShipmentClient 
         products={products as any} 
         shipments={shipments as any}
+        suppliers={suppliers as any}
         isAdmin={isAdmin}
       />
     </div>

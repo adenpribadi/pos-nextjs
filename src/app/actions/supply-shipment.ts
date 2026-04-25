@@ -13,6 +13,16 @@ export async function createSupplyShipment(formData: FormData) {
     const productId = formData.get("productId") as string
     const quantity = parseInt(formData.get("quantity") as string)
     const notes = formData.get("notes") as string
+    const isAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER"
+    
+    // Default to the current user (for Suppliers), or the selected supplier (for Admin/Manager)
+    let supplierId = session.user.id
+    if (isAdmin) {
+      const selectedSupplierId = formData.get("supplierId") as string
+      if (selectedSupplierId) {
+        supplierId = selectedSupplierId
+      }
+    }
 
     if (!productId || isNaN(quantity) || quantity <= 0) {
       return { success: false, error: "Data pengiriman tidak valid." }
@@ -21,7 +31,7 @@ export async function createSupplyShipment(formData: FormData) {
     await prisma.supplyShipment.create({
       data: {
         productId,
-        supplierId: session.user.id,
+        supplierId,
         quantity,
         notes,
         status: "PENDING",

@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
-const inter = Inter({
-  variable: "--font-inter",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "BintangPOS | Premium Point of Sale",
+  title: "WarungBintang | Premium Point of Sale",
   description: "Modern Point of Sale application built with Next.js",
 };
 
@@ -22,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("h-full", "font-sans")}>
-      <body className={`${inter.variable} min-h-full font-sans antialiased`}>
+    <html lang="en" suppressHydrationWarning className={cn("h-full", "font-sans", plusJakartaSans.variable)}>
+      <body className="min-h-full font-sans antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

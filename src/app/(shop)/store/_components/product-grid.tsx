@@ -48,8 +48,8 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
   const { addItem, items, updateQuantity, removeItem } = useCart()
 
   const filteredProducts = initialProducts.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = !selectedCategoryId || p.categoryId === selectedCategoryId
     return matchesSearch && matchesCategory
   })
@@ -64,8 +64,8 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
         variant={selectedCategoryId === null ? "default" : "ghost"}
         className={cn(
           "w-full justify-start font-medium transition-all",
-          selectedCategoryId === null 
-            ? "shadow-md shadow-primary/20" 
+          selectedCategoryId === null
+            ? "shadow-md shadow-primary/20"
             : "text-muted-foreground hover:text-foreground"
         )}
         onClick={() => setSelectedCategoryId(null)}
@@ -79,18 +79,18 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
           variant={selectedCategoryId === category.id ? "default" : "ghost"}
           className={cn(
             "w-full justify-between font-medium group transition-all",
-            selectedCategoryId === category.id 
-              ? "shadow-md shadow-primary/20" 
+            selectedCategoryId === category.id
+              ? "shadow-md shadow-primary/20"
               : "text-muted-foreground hover:text-foreground"
           )}
           onClick={() => setSelectedCategoryId(category.id)}
         >
           <span className="flex items-center truncate">
-             {selectedCategoryId === category.id && <Check className="mr-2 h-4 w-4" />}
-             {category.name}
+            {selectedCategoryId === category.id && <Check className="mr-2 h-4 w-4" />}
+            {category.name}
           </span>
-          <Badge 
-            variant="secondary" 
+          <Badge
+            variant="secondary"
             className={cn(
               "ml-2 text-[10px] px-1.5 h-4 min-w-[20px] justify-center",
               selectedCategoryId === category.id ? "bg-primary-foreground/20 text-white" : "bg-muted text-muted-foreground"
@@ -110,7 +110,7 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
         <div className="mb-8">
           <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Kategori</h2>
           <ScrollArea className="h-[calc(100vh-250px)] pr-4">
-             <CategoryList />
+            <CategoryList />
           </ScrollArea>
         </div>
       </aside>
@@ -120,14 +120,14 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
           <div className="flex items-center gap-2">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-              <Input 
-                placeholder="Cari produk di etalase..." 
+              <Input
+                placeholder="Cari produk di etalase..."
                 className="pl-10 h-11 bg-card/50 backdrop-blur-sm shadow-sm border-border/50 focus-visible:ring-primary transition-all"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             {/* Mobile Category Trigger */}
             <Sheet>
               <SheetTrigger render={
@@ -150,23 +150,23 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar lg:hidden">
-             <Badge 
+            <Badge
               variant={selectedCategoryId === null ? "default" : "outline"}
               className="px-4 py-1.5 cursor-pointer whitespace-nowrap"
               onClick={() => setSelectedCategoryId(null)}
-             >
-               Semua
-             </Badge>
-             {categories.map(cat => (
-               <Badge
+            >
+              Semua
+            </Badge>
+            {categories.map(cat => (
+              <Badge
                 key={cat.id}
                 variant={selectedCategoryId === cat.id ? "default" : "outline"}
                 className="px-4 py-1.5 cursor-pointer whitespace-nowrap"
                 onClick={() => setSelectedCategoryId(cat.id)}
-               >
-                 {cat.name}
-               </Badge>
-             ))}
+              >
+                {cat.name}
+              </Badge>
+            ))}
           </div>
         </div>
 
@@ -178,8 +178,8 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
               </div>
               <p className="text-xl font-medium">Produk tidak ditemukan</p>
               <p className="text-sm opacity-60">Coba gunakan kata kunci lain atau pilih kategori lain.</p>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="mt-4 text-primary"
                 onClick={() => {
                   setSearchTerm("")
@@ -204,13 +204,13 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      
+
                       {p.category && (
                         <Badge className="absolute top-3 left-3 bg-primary/90 backdrop-blur-md border-none text-[10px] font-bold shadow-lg">
                           {p.category.name}
                         </Badge>
                       )}
-                      
+
                       {p.stock <= 5 && (
                         <Badge variant="destructive" className="absolute top-3 right-3 text-[10px] font-black border-none shadow-lg animate-pulse">
                           STOK TERBATAS
@@ -228,33 +228,33 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
                         </span>
                       </div>
                       <div className="mt-3 flex items-center justify-between text-[10px] md:text-xs">
-                         <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
-                           <div className={cn(
-                             "h-1.5 w-1.5 rounded-full",
-                             p.stock > 10 ? "bg-emerald-500" : "bg-orange-500"
-                           )} />
-                           Stok: {p.stock}
-                         </div>
-                         <span className="bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-semibold">
-                           # {p.sku}
-                         </span>
+                        <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
+                          <div className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            p.stock > 10 ? "bg-emerald-500" : "bg-orange-500"
+                          )} />
+                          Stok: {p.stock}
+                        </div>
+                        <span className="bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-semibold">
+                          # {p.sku}
+                        </span>
                       </div>
                     </CardContent>
                     <CardFooter className="p-4 pt-0">
                       {count > 0 ? (
                         <div className="flex items-center justify-between w-full bg-primary/10 rounded-xl p-1.5 border border-primary/20">
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             className="h-9 w-9 text-primary hover:bg-primary/20 transition-colors"
                             onClick={() => count === 1 ? removeItem(p.id) : updateQuantity(p.id, count - 1)}
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
                           <span className="font-bold text-primary text-base">{count}</span>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             className="h-9 w-9 text-primary hover:bg-primary/20 transition-colors"
                             onClick={() => updateQuantity(p.id, count + 1)}
                             disabled={count >= p.stock}
@@ -263,7 +263,7 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
                           </Button>
                         </div>
                       ) : (
-                        <Button 
+                        <Button
                           className="w-full h-11 shadow-lg shadow-primary/20 font-bold rounded-xl active:scale-95 transition-all text-sm group"
                           onClick={() => addItem({
                             productId: p.id,
@@ -273,8 +273,8 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
                             image: p.image
                           })}
                         >
-                          <ShoppingCart className="mr-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
-                          Tambah ke Keranjang
+                          <Plus className="mr-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
+                          Keranjang
                         </Button>
                       )}
                     </CardFooter>

@@ -34,12 +34,12 @@ export default function Home() {
       <main className="flex-1 flex flex-col items-center justify-center px-6 text-center z-10 pt-20 pb-32">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50 text-sm font-medium text-muted-foreground mb-8">
           <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          Sistem BintangPOS Telah Aktif
+          Sistem WarungBintang Telah Aktif
         </div>
         
         <h1 className="text-5xl md:text-7xl font-black tracking-tighter max-w-4xl text-foreground mb-6 leading-[1.1]">
           Kelola Bisnis Lebih Cerdas <br className="hidden md:block" /> 
-          Dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">BintangPOS Premium</span>.
+          Dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">WarungBintang Premium</span>.
         </h1>
         
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-12">
@@ -82,7 +82,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-border/50 py-8 bg-muted/10 text-center text-sm text-muted-foreground z-10">
-        <p>&copy; {new Date().getFullYear()} BintangPOS Architecture. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} WarungBintang Architecture. All rights reserved.</p>
       </footer>
     </div>
   )
