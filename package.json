@@ -7,7 +7,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "deploy": "npm run build && pm2 restart warungbintang || pm2 start npm --name 'warungbintang' -- start -- -p 3000"
+    "deploy": "npm run build && pm2 restart warungbintang || pm2 start npm --name warungbintang -- start"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
