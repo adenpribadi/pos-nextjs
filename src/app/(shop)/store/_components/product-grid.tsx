@@ -190,12 +190,12 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-4">
               {filteredProducts.map((p) => {
                 const count = getItemCount(p.id)
                 return (
                   <Card key={p.id} className="p-0 gap-0 overflow-hidden border-border/50 group hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 bg-card/60 backdrop-blur-sm rounded-lg sm:rounded-xl flex flex-col h-full border hover:border-primary/50">
-                    <div className="aspect-[4/3] sm:aspect-square bg-muted relative overflow-hidden shrink-0">
+                    <div className="aspect-[4/3] bg-muted relative overflow-hidden shrink-0">
                       {p.image ? (
                         <img src={p.image} alt={p.name} className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700" />
                       ) : (
