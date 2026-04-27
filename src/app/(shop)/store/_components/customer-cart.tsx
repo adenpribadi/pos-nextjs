@@ -103,7 +103,16 @@ export function CustomerCart() {
         setIsOpen(false)
         router.refresh()
       } else {
-        toast.error("Checkout Gagal", { description: data.error || "Gagal memproses pesanan." })
+        if (res.status === 401 || data.error?.toLowerCase().includes("login") || data.error?.toLowerCase().includes("unauthorized")) {
+          toast.error("Harap Login Dahulu", { 
+            description: "Silakan login atau daftar akun pelanggan untuk memproses pesanan Anda.",
+            duration: 5000,
+          })
+          setIsOpen(false)
+          router.push("/login")
+        } else {
+          toast.error("Checkout Gagal", { description: data.error || "Gagal memproses pesanan." })
+        }
       }
     } catch (error) {
       toast.error("Kesalahan Sistem", { description: "Gagal menghubungkan ke server." })
