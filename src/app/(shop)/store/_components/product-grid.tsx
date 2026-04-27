@@ -116,13 +116,13 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
       </aside>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-muted/5">
-        <div className="p-6 pb-0 flex flex-col gap-4">
+        <div className="p-2 sm:p-4 pb-1 sm:pb-2 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
               <Input
                 placeholder="Cari produk di etalase..."
-                className="pl-10 h-11 bg-card/50 backdrop-blur-sm shadow-sm border-border/50 focus-visible:ring-primary transition-all"
+                className="pl-9 sm:pl-10 h-9 sm:h-11 text-xs sm:text-sm bg-card/50 backdrop-blur-sm shadow-sm border-border/50 focus-visible:ring-primary transition-all"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -131,8 +131,8 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
             {/* Mobile Category Trigger */}
             <Sheet>
               <SheetTrigger render={
-                <Button variant="outline" size="icon" className="lg:hidden h-11 w-11 shrink-0 border-border/50">
-                  <Filter className="h-5 w-5" />
+                <Button variant="outline" size="icon" className="lg:hidden h-9 w-9 sm:h-11 sm:w-11 shrink-0 border-border/50">
+                  <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               } />
               <SheetContent side="left" className="w-[300px] border-r border-border/50 bg-card/95 backdrop-blur-xl">
@@ -149,10 +149,10 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
             </Sheet>
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar lg:hidden">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 no-scrollbar lg:hidden">
             <Badge
               variant={selectedCategoryId === null ? "default" : "outline"}
-              className="px-4 py-1.5 cursor-pointer whitespace-nowrap"
+              className="px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs cursor-pointer whitespace-nowrap"
               onClick={() => setSelectedCategoryId(null)}
             >
               Semua
@@ -161,7 +161,7 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
               <Badge
                 key={cat.id}
                 variant={selectedCategoryId === cat.id ? "default" : "outline"}
-                className="px-4 py-1.5 cursor-pointer whitespace-nowrap"
+                className="px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs cursor-pointer whitespace-nowrap"
                 onClick={() => setSelectedCategoryId(cat.id)}
               >
                 {cat.name}
@@ -170,9 +170,9 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 pb-24">
+        <div className="flex-1 overflow-y-auto px-2 sm:px-4 pb-24">
           {filteredProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-32 text-muted-foreground bg-card/30 rounded-3xl border-2 border-dashed border-border/50">
+            <div className="flex flex-col items-center justify-center py-32 text-muted-foreground bg-card/30 rounded-3xl border-2 border-dashed border-border/50 mt-4">
               <div className="bg-muted p-6 rounded-full mb-4">
                 <ShoppingCart className="h-12 w-12 opacity-20" />
               </div>
@@ -190,81 +190,83 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-4">
               {filteredProducts.map((p) => {
                 const count = getItemCount(p.id)
                 return (
-                  <Card key={p.id} className="overflow-hidden border-border/50 group hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 bg-card/60 backdrop-blur-sm rounded-2xl flex flex-col h-full border hover:border-primary/50">
-                    <div className="aspect-square bg-muted relative overflow-hidden shrink-0">
+                  <Card key={p.id} className="p-0 gap-0 overflow-hidden border-border/50 group hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 bg-card/60 backdrop-blur-sm rounded-lg sm:rounded-xl flex flex-col h-full border hover:border-primary/50">
+                    <div className="aspect-[4/3] sm:aspect-square bg-muted relative overflow-hidden shrink-0">
                       {p.image ? (
                         <img src={p.image} alt={p.name} className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 bg-gradient-to-br from-muted to-muted/50">
-                          <Tag className="h-16 w-16 rotate-12" />
+                          <Tag className="h-8 w-8 sm:h-12 sm:w-12 rotate-12" />
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                       {p.category && (
-                        <Badge className="absolute top-3 left-3 bg-primary/90 backdrop-blur-md border-none text-[10px] font-bold shadow-lg">
+                        <Badge className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-primary/90 backdrop-blur-md border-none text-[8px] sm:text-[10px] font-bold shadow-sm px-1.5 py-0">
                           {p.category.name}
                         </Badge>
                       )}
 
                       {p.stock <= 5 && (
-                        <Badge variant="destructive" className="absolute top-3 right-3 text-[10px] font-black border-none shadow-lg animate-pulse">
+                        <Badge variant="destructive" className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 text-[8px] sm:text-[10px] font-black border-none shadow-sm animate-pulse px-1.5 py-0">
                           STOK TERBATAS
                         </Badge>
                       )}
                     </div>
-                    <CardContent className="p-4 flex-1">
-                      <h3 className="font-bold text-sm md:text-base line-clamp-2 min-h-[40px] group-hover:text-primary transition-colors leading-tight">
-                        {p.name}
-                      </h3>
-                      <div className="mt-2 flex items-baseline gap-1">
-                        <span className="text-xs font-medium text-muted-foreground">Rp</span>
-                        <span className="text-lg md:text-xl font-black text-foreground antialiased tracking-tight">
-                          {p.price.toLocaleString("id-ID")}
-                        </span>
+                    <CardContent className="p-2 sm:p-3 flex-1 flex flex-col justify-end gap-1 sm:gap-1.5">
+                      <div>
+                        <h3 className="font-bold text-[11px] sm:text-sm line-clamp-2 group-hover:text-primary transition-colors leading-tight">
+                          {p.name}
+                        </h3>
+                        <div className="flex items-baseline gap-1 mt-0.5">
+                          <span className="text-[9px] sm:text-xs font-medium text-muted-foreground">Rp</span>
+                          <span className="text-xs sm:text-base md:text-lg font-black text-foreground antialiased tracking-tight">
+                            {p.price.toLocaleString("id-ID")}
+                          </span>
+                        </div>
                       </div>
-                      <div className="mt-3 flex items-center justify-between text-[10px] md:text-xs">
-                        <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
+                      <div className="flex items-center justify-between text-[8px] sm:text-[10px] mt-0.5">
+                        <div className="flex items-center gap-1 text-muted-foreground font-medium">
                           <div className={cn(
-                            "h-1.5 w-1.5 rounded-full",
+                            "h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full",
                             p.stock > 10 ? "bg-emerald-500" : "bg-orange-500"
                           )} />
                           Stok: {p.stock}
                         </div>
-                        <span className="bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-semibold">
-                          # {p.sku}
+                        <span className="bg-muted px-1 py-0 rounded text-muted-foreground font-semibold truncate max-w-[50px] sm:max-w-none">
+                          #{p.sku.split('-').pop() || p.sku}
                         </span>
                       </div>
                     </CardContent>
-                    <CardFooter className="p-4 pt-0">
+                    <CardFooter className="p-2 sm:p-3 pt-0">
                       {count > 0 ? (
-                        <div className="flex items-center justify-between w-full bg-primary/10 rounded-xl p-1.5 border border-primary/20">
+                        <div className="flex items-center justify-between w-full bg-primary/10 rounded-md sm:rounded-lg p-0.5 sm:p-1 border border-primary/20">
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-9 w-9 text-primary hover:bg-primary/20 transition-colors"
+                            className="h-6 w-6 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 transition-colors"
                             onClick={() => count === 1 ? removeItem(p.id) : updateQuantity(p.id, count - 1)}
                           >
-                            <Minus className="h-4 w-4" />
+                            <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="font-bold text-primary text-base">{count}</span>
+                          <span className="font-bold text-primary text-xs sm:text-sm">{count}</span>
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-9 w-9 text-primary hover:bg-primary/20 transition-colors"
+                            className="h-6 w-6 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 transition-colors"
                             onClick={() => updateQuantity(p.id, count + 1)}
                             disabled={count >= p.stock}
                           >
-                            <Plus className="h-4 w-4" />
+                            <Plus className="h-3 w-3" />
                           </Button>
                         </div>
                       ) : (
                         <Button
-                          className="w-full h-11 shadow-lg shadow-primary/20 font-bold rounded-xl active:scale-95 transition-all text-sm group"
+                          className="w-full h-7 sm:h-9 shadow-sm sm:shadow-md shadow-primary/20 font-bold rounded-md sm:rounded-lg active:scale-95 transition-all text-[9px] sm:text-xs group"
                           onClick={() => addItem({
                             productId: p.id,
                             name: p.name,
@@ -273,7 +275,7 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
                             image: p.image
                           })}
                         >
-                          <Plus className="mr-2 h-4 w-4 transition-transform group-hover:-translate-y-1" />
+                          <Plus className="mr-1 sm:mr-1.5 h-3 w-3 transition-transform group-hover:-translate-y-0.5" />
                           Keranjang
                         </Button>
                       )}
