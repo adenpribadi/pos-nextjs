@@ -24,7 +24,8 @@ import { registerCustomer } from "@/app/actions/auth"
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Nama terlalu pendek" }),
-  email: z.string().email({ message: "Email tidak valid" }),
+  phone: z.string().min(8, { message: "Nomor HP tidak valid" }),
+  email: z.string().email({ message: "Email tidak valid" }).optional().or(z.literal("")),
   password: z.string().min(6, { message: "Password minimal 6 karakter" }),
 })
 
@@ -37,6 +38,7 @@ export default function RegisterPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      phone: "",
       email: "",
       password: "",
     },
@@ -49,7 +51,10 @@ export default function RegisterPage() {
     try {
       const formData = new FormData()
       formData.append("name", values.name)
-      formData.append("email", values.email)
+      formData.append("phone", values.phone)
+      if (values.email) {
+        formData.append("email", values.email)
+      }
       formData.append("password", values.password)
 
       const res = await registerCustomer(formData)
@@ -74,12 +79,12 @@ export default function RegisterPage() {
       <div className="absolute bottom-[-10%] left-[-10%] w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md z-10">
-        <div className="flex justify-center text-primary mb-6">
-          <div className="p-3 bg-primary/10 rounded-2xl ring-1 ring-primary/20 backdrop-blur-md">
-            <Store className="w-10 h-10" />
+        <div className="flex justify-center text-blue-600 mb-6">
+          <div className="p-3 bg-blue-600/10 rounded-2xl ring-1 ring-blue-600/20 backdrop-blur-md">
+            <Store className="w-10 h-10 text-blue-600" />
           </div>
         </div>
-        <h2 className="mt-2 text-center text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+        <h2 className="mt-2 text-center text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
           Daftar Akun Baru
         </h2>
       </div>
@@ -114,10 +119,28 @@ export default function RegisterPage() {
                 />
                 <FormField
                   control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nomor HP (Wajib)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Misal: 081234567890" 
+                          type="tel"
+                          {...field} 
+                          className="bg-background/50 border-input/50 h-11"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Alamat Email</FormLabel>
+                      <FormLabel>Alamat Email (Opsional)</FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="budi@email.com" 

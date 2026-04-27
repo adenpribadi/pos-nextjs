@@ -94,7 +94,10 @@ export function TopBar() {
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={() => signOut({ callbackUrl: '/login' })} 
+          onClick={() => {
+            import("@/hooks/useCart").then((mod) => mod.useCart.getState().clearCart());
+            signOut({ callbackUrl: '/login' });
+          }} 
           className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
           title="Keluar"
         >

@@ -12,7 +12,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "WarungBintang | Premium Point of Sale",
+  title: "Warung Bintang | Sembako & Kebutuhan Harian",
   description: "Modern Point of Sale application built with Next.js",
 };
 

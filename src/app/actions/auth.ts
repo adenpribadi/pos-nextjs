@@ -6,24 +6,35 @@ import bcrypt from "bcrypt"
 export async function registerCustomer(formData: FormData) {
   try {
     const name = formData.get("name") as string
-    const email = formData.get("email") as string
+    const email = formData.get("email") as string | null
+    const phone = formData.get("phone") as string
     const password = formData.get("password") as string
 
-    if (!name || !email || !password) {
-      return { success: false, error: "Semua kolom wajib diisi." }
+    if (!name || !phone || !password) {
+      return { success: false, error: "Nama, Nomor HP, dan Password wajib diisi." }
     }
 
     if (password.length < 6) {
       return { success: false, error: "Password minimal 6 karakter." }
     }
 
-    // Cek apakah email sudah terdaftar
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
+    // Cek apakah nomor HP sudah terdaftar
+    const existingUserByPhone = await prisma.user.findUnique({
+      where: { phone }
     })
 
-    if (existingUser) {
-      return { success: false, error: "Email ini sudah terdaftar." }
+    if (existingUserByPhone) {
+      return { success: false, error: "Nomor HP ini sudah terdaftar." }
+    }
+
+    if (email) {
+      const existingUserByEmail = await prisma.user.findUnique({
+        where: { email }
+      })
+
+      if (existingUserByEmail) {
+        return { success: false, error: "Email ini sudah terdaftar." }
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
@@ -34,7 +45,8 @@ export async function registerCustomer(formData: FormData) {
       const user = await tx.user.create({
         data: {
           name,
-          email,
+          email: email || undefined,
+          phone,
           password: hashedPassword,
           role: "CUSTOMER", // Berikan role pelanggan
         }
@@ -45,7 +57,8 @@ export async function registerCustomer(formData: FormData) {
       await tx.customer.create({
         data: {
           name,
-          email,
+          email: email || undefined,
+          phone,
         }
       })
     })

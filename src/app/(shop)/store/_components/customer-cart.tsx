@@ -40,6 +40,7 @@ export function CustomerCart() {
   const [copied, setCopied] = useState(false)
   const [promoInput, setPromoInput] = useState("")
   const [isValidatingPromo, setIsValidatingPromo] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export function CustomerCart() {
         })
       }
     })
+    setIsMounted(true)
   }, [setTaxRate])
 
   const totalItems = getTotalItems()
@@ -115,7 +117,7 @@ export function CustomerCart() {
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger className="h-16 w-16 rounded-full shadow-2xl shadow-primary/40 relative group bg-primary text-primary-foreground flex items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all hover:bg-primary/90">
           <ShoppingCart className="h-6 w-6 group-hover:scale-110 transition-transform" />
-          {totalItems > 0 && (
+          {isMounted && totalItems > 0 && (
             <span className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-destructive text-white text-[10px] font-bold flex items-center justify-center border-2 border-background animate-in zoom-in">
               {totalItems}
             </span>

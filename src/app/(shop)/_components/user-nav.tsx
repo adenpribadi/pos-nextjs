@@ -81,7 +81,10 @@ export function UserNav({ user }: UserNavProps) {
         <DropdownMenuSeparator />
         <DropdownMenuItem 
           className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer font-bold"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => {
+            import("@/hooks/useCart").then((mod) => mod.useCart.getState().clearCart());
+            signOut({ callbackUrl: "/login" });
+          }}
         >
           <LogOut className="mr-2 h-4 w-4" />
           Keluar

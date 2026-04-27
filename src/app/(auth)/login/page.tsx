@@ -22,8 +22,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Store, Loader2 } from "lucide-react"
 
 const formSchema = z.object({
-  email: z.string().email({
-    message: "Harap masukkan alamat email yang valid.",
+  identifier: z.string().min(3, {
+    message: "Harap masukkan email atau nomor HP yang valid.",
   }),
   password: z.string().min(1, {
     message: "Password wajib diisi.",
@@ -38,7 +38,7 @@ export default function LoginPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
+      identifier: "",
       password: "",
     },
   })
@@ -50,12 +50,12 @@ export default function LoginPage() {
     try {
       const response = await signIn("credentials", {
         redirect: false,
-        email: values.email,
+        identifier: values.identifier,
         password: values.password,
       })
 
       if (response?.error) {
-        setError("Email atau Password salah.")
+        setError("Email/Nomor HP atau Password salah.")
         setIsLoading(false)
       } else {
         // Ambil sesi terbaru untuk mengecek role
@@ -102,12 +102,12 @@ export default function LoginPage() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[300px] h-[300px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="flex justify-center text-primary mb-6">
-          <div className="p-3 bg-primary/10 rounded-2xl ring-1 ring-primary/20 backdrop-blur-md">
-            <Store className="w-10 h-10" />
+        <div className="flex justify-center text-blue-600 mb-6">
+          <div className="p-3 bg-blue-600/10 rounded-2xl ring-1 ring-blue-600/20 backdrop-blur-md">
+            <Store className="w-10 h-10 text-blue-600" />
           </div>
         </div>
-        <h1 className="text-3xl font-black tracking-tighter text-foreground mb-2 text-center">Masuk ke WarungBintang</h1>
+        <h1 className="text-3xl font-black tracking-tighter text-slate-900 mb-2 text-center">Masuk ke Warung Bintang</h1>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-[400px] relative z-10">
@@ -123,14 +123,14 @@ export default function LoginPage() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                 <FormField
                   control={form.control}
-                  name="email"
+                  name="identifier"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email Address</FormLabel>
+                      <FormLabel>Email atau Nomor HP</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="admin@pos.com" 
-                          autoComplete="email"
+                          placeholder="contoh@email.com / 081234..." 
+                          autoComplete="username"
                           {...field} 
                           className="bg-background/50 border-input/50 focus:bg-background h-11"
                         />
@@ -191,22 +191,7 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        {/* Info Card for Demo (Optional, made it look cleaner) */}
-        {!error && !isLoading && (
-          <div className="mt-6 p-4 rounded-xl bg-muted/30 border border-border/50 backdrop-blur-sm">
-             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">Akun Demo Default:</p>
-             <div className="grid grid-cols-2 gap-4">
-                <div>
-                   <p className="text-[9px] text-muted-foreground">Admin Email:</p>
-                   <p className="text-xs font-mono text-primary">admin@pos.com</p>
-                </div>
-                <div>
-                   <p className="text-[9px] text-muted-foreground">Password:</p>
-                   <p className="text-xs font-mono text-primary">admin123</p>
-                </div>
-             </div>
-          </div>
-        )}
+
       </div>
     </div>
   )
