@@ -223,3 +223,30 @@ export async function deleteProduct(formData: FormData) {
     return { success: false, error: "Gagal menghapus. Pastikan produk tidak terikat data penjualan." }
   }
 }
+
+export async function searchProducts(query: string) {
+  if (!query || query.length < 2) return []
+
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        OR: [
+          { name: { contains: query } },
+          { sku: { contains: query } }
+        ]
+      },
+      take: 5,
+      include: {
+        category: true
+      }
+    })
+    return products.map(p => ({
+      ...p,
+      price: Number(p.price),
+      costPrice: p.costPrice ? Number(p.costPrice) : null,
+    }))
+  } catch (error) {
+    console.error("Search error:", error)
+    return []
+  }
+}

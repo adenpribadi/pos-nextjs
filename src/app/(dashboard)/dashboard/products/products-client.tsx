@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -52,7 +53,8 @@ interface Category {
 }
 
 export function ProductsClient({ data, categories }: { data: ProductColumn[], categories: Category[] }) {
-  const [searchTerm, setSearchTerm] = useState("")
+  const searchParams = useSearchParams()
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<ProductColumn | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -60,6 +62,13 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
   const [isCompressing, setIsCompressing] = useState(false)
   const [compressedFile, setCompressedFile] = useState<File | null>(null)
   const { canManageProducts, isLoading } = usePermissions()
+
+  useEffect(() => {
+    const query = searchParams.get("search")
+    if (query !== null) {
+      setSearchTerm(query)
+    }
+  }, [searchParams])
 
   const handleAddClick = () => {
     if (!canManageProducts) {

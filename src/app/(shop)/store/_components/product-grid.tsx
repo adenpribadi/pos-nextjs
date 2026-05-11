@@ -42,6 +42,19 @@ interface ProductGridProps {
   categories: Category[]
 }
 
+const CATEGORY_COLORS: Record<string, { bg: string, text: string, border: string, dot: string }> = {
+  "Bahan Pokok": { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200/50", dot: "bg-emerald-500" },
+  "Makanan Berat": { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200/50", dot: "bg-amber-500" },
+  "Makanan Ringan": { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200/50", dot: "bg-rose-500" },
+  "Minuman": { bg: "bg-sky-50", text: "text-sky-700", border: "border-sky-200/50", dot: "bg-sky-500" },
+  "Pencuci Mulut": { bg: "bg-violet-50", text: "text-violet-700", border: "border-violet-200/50", dot: "bg-violet-500" },
+  "default": { bg: "bg-zinc-50", text: "text-zinc-700", border: "border-zinc-200/50", dot: "bg-zinc-500" }
+}
+
+const getCategoryStyle = (name: string) => {
+  return CATEGORY_COLORS[name] || CATEGORY_COLORS["default"]
+}
+
 export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
@@ -59,70 +72,86 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
   }
 
   const CategoryList = ({ isMobile = false }) => (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <Button
-        variant={selectedCategoryId === null ? "default" : "ghost"}
+        variant="ghost"
         className={cn(
-          "w-full justify-start font-medium transition-all",
+          "w-full justify-start font-semibold transition-all h-10 px-3 relative",
           selectedCategoryId === null
-            ? "shadow-md shadow-primary/20"
-            : "text-muted-foreground hover:text-foreground"
+            ? "bg-primary/5 text-primary hover:bg-primary/10"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted"
         )}
         onClick={() => setSelectedCategoryId(null)}
       >
-        <LayoutGrid className="mr-2 h-4 w-4" />
+        {selectedCategoryId === null && (
+          <div className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-full" />
+        )}
+        <LayoutGrid className={cn("mr-2.5 h-4 w-4", selectedCategoryId === null ? "text-primary" : "text-muted-foreground/60")} />
         Semua Produk
       </Button>
-      {categories.map((category) => (
-        <Button
-          key={category.id}
-          variant={selectedCategoryId === category.id ? "default" : "ghost"}
-          className={cn(
-            "w-full justify-between font-medium group transition-all",
-            selectedCategoryId === category.id
-              ? "shadow-md shadow-primary/20"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-          onClick={() => setSelectedCategoryId(category.id)}
-        >
-          <span className="flex items-center truncate">
-            {selectedCategoryId === category.id && <Check className="mr-2 h-4 w-4" />}
-            {category.name}
-          </span>
-          <Badge
-            variant="secondary"
+      {categories.map((category) => {
+        const style = getCategoryStyle(category.name)
+        const isSelected = selectedCategoryId === category.id
+        
+        return (
+          <Button
+            key={category.id}
+            variant="ghost"
             className={cn(
-              "ml-2 text-[10px] px-1.5 h-4 min-w-[20px] justify-center",
-              selectedCategoryId === category.id ? "bg-primary-foreground/20 text-white" : "bg-muted text-muted-foreground"
+              "w-full justify-between font-bold group transition-all duration-300 h-11 px-3 relative rounded-xl",
+              isSelected
+                ? "bg-background shadow-sm border border-border/50 text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             )}
+            onClick={() => setSelectedCategoryId(category.id)}
           >
-            {category._count.products}
-          </Badge>
-        </Button>
-      ))}
+            {isSelected && (
+              <div className={cn("absolute left-0 top-3 bottom-3 w-1 rounded-r-full", style.dot)} />
+            )}
+            <span className="flex items-center truncate">
+              <div className={cn(
+                "mr-3 h-2 w-2 rounded-full transition-transform duration-300 group-hover:scale-125",
+                style.dot,
+                !isSelected && "opacity-40"
+              )} />
+              {category.name}
+            </span>
+            <span
+              className={cn(
+                "ml-2 text-[10px] px-2.5 py-0.5 rounded-full font-black min-w-[28px] text-center transition-all duration-300",
+                isSelected 
+                  ? `${style.bg} ${style.text} shadow-sm scale-110` 
+                  : "bg-muted/50 text-muted-foreground/60 group-hover:bg-muted group-hover:text-muted-foreground"
+              )}
+            >
+              {category._count.products}
+            </span>
+          </Button>
+        )
+      })}
     </div>
   )
 
   return (
     <div className="flex h-full overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-72 border-r border-border/50 bg-background/40 backdrop-blur-xl p-6 overflow-hidden flex flex-col">
-        <div className="mb-8">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Kategori</h2>
-          <ScrollArea className="h-[calc(100vh-250px)] pr-4">
+      <aside className="hidden lg:block w-64 border-r border-border/40 bg-background/40 backdrop-blur-xl p-4 overflow-hidden flex flex-col">
+        <div className="mb-6">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-3 ml-1">Kategori</h2>
+          <ScrollArea className="h-[calc(100vh-200px)] pr-2">
             <CategoryList />
           </ScrollArea>
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-muted/5">
-        <div className="p-2 sm:p-4 pb-1 sm:pb-2 flex flex-col gap-2">
+        <div className="p-2 sm:p-3 pb-1 sm:pb-1.5 flex flex-col gap-3">
           <div className="flex items-center gap-2">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            <div className="flex-1 relative group">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
               <Input
-                placeholder="Cari produk di etalase..."
-                className="pl-9 sm:pl-10 h-9 sm:h-11 text-xs sm:text-sm bg-card/50 backdrop-blur-sm shadow-sm border-border/50 focus-visible:ring-primary transition-all"
+                placeholder="Search items..."
+                className="pl-10 h-11 text-xs bg-background border-border/40 shadow-sm rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary transition-all placeholder:text-muted-foreground/30 font-medium"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -170,7 +199,7 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-2 sm:px-4 pb-24">
+        <div className="flex-1 overflow-y-auto px-2 pb-24">
           {filteredProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-32 text-muted-foreground bg-card/30 rounded-3xl border-2 border-dashed border-border/50 mt-4">
               <div className="bg-muted p-6 rounded-full mb-4">
@@ -190,74 +219,87 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3">
               {filteredProducts.map((p) => {
                 const count = getItemCount(p.id)
                 return (
-                  <Card key={p.id} className="p-0 gap-0 overflow-hidden border-border/50 group hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 bg-card/60 backdrop-blur-sm rounded-lg sm:rounded-xl flex flex-col h-full border hover:border-primary/50">
-                    <div className="aspect-[4/3] bg-muted relative overflow-hidden shrink-0">
+                  <Card key={p.id} className="p-0 gap-0 overflow-hidden border-border/40 group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 bg-card hover:border-primary/30 rounded-xl flex flex-col h-full border">
+                    <div className="aspect-[4/3] bg-muted/30 relative overflow-hidden shrink-0">
                       {p.image ? (
-                        <img src={p.image} alt={p.name} className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700" />
+                        <img src={p.image} alt={p.name} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 bg-gradient-to-br from-muted to-muted/50">
-                          <Tag className="h-8 w-8 sm:h-12 sm:w-12 rotate-12" />
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground/20 bg-gradient-to-br from-muted/50 to-muted/30">
+                          <Tag className="h-10 w-10 rotate-12" />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
 
                       {p.category && (
-                        <Badge className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-primary/90 backdrop-blur-md border-none text-[8px] sm:text-[10px] font-bold shadow-sm px-1.5 py-0">
-                          {p.category.name}
-                        </Badge>
+                        <div className="absolute top-3 left-3">
+                          <span className={cn(
+                            "backdrop-blur-xl px-3 py-1 rounded-full text-[10px] font-black shadow-lg border uppercase tracking-widest transition-transform duration-500 group-hover:-translate-y-0.5",
+                            getCategoryStyle(p.category.name).bg,
+                            getCategoryStyle(p.category.name).text,
+                            getCategoryStyle(p.category.name).border
+                          )}>
+                            {p.category.name}
+                          </span>
+                        </div>
                       )}
 
                       {p.stock <= 5 && (
-                        <Badge variant="destructive" className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 text-[8px] sm:text-[10px] font-black border-none shadow-sm animate-pulse px-1.5 py-0">
-                          STOK TERBATAS
-                        </Badge>
+                        <div className="absolute top-2 right-2">
+                          <span className="bg-destructive text-destructive-foreground px-2 py-0.5 rounded-full text-[9px] font-black shadow-sm animate-pulse uppercase tracking-tighter">
+                            Sisa {p.stock}
+                          </span>
+                        </div>
                       )}
                     </div>
-                    <CardContent className="p-2 sm:p-3 flex-1 flex flex-col justify-end gap-1 sm:gap-1.5">
-                      <div>
-                        <h3 className="font-bold text-[11px] sm:text-sm line-clamp-2 group-hover:text-primary transition-colors leading-tight">
+
+                    <CardContent className="p-2 sm:p-3 pt-1.5 flex flex-col gap-1">
+                      <div className="space-y-0.5">
+                        <h3 className="font-bold text-[11px] sm:text-xs line-clamp-2 text-foreground/90 group-hover:text-primary transition-colors leading-tight">
                           {p.name}
                         </h3>
-                        <div className="flex items-baseline gap-1 mt-0.5">
-                          <span className="text-[9px] sm:text-xs font-medium text-muted-foreground">Rp</span>
-                          <span className="text-xs sm:text-base md:text-lg font-black text-foreground antialiased tracking-tight">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-base sm:text-lg font-black text-foreground tracking-tighter">
+                            <span className="text-[9px] sm:text-[10px] font-medium text-muted-foreground mr-0.5">Rp</span>
                             {p.price.toLocaleString("id-ID")}
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between text-[8px] sm:text-[10px] mt-0.5">
-                        <div className="flex items-center gap-1 text-muted-foreground font-medium">
+
+                      <div className="flex items-center justify-between text-[9px] mt-auto pt-1.5 border-t border-border/40">
+                        <div className="flex items-center gap-1 font-semibold">
                           <div className={cn(
-                            "h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full",
-                            p.stock > 10 ? "bg-emerald-500" : "bg-orange-500"
+                            "h-1 w-1 rounded-full",
+                            p.stock > 10 ? "bg-emerald-500" : "bg-amber-500"
                           )} />
-                          Stok: {p.stock}
+                          <span className="text-muted-foreground">Stok {p.stock}</span>
                         </div>
-                        <span className="bg-muted px-1 py-0 rounded text-muted-foreground font-semibold truncate max-w-[50px] sm:max-w-none">
+                        <span className="text-[8px] text-muted-foreground/50 font-mono">
                           #{p.sku.split('-').pop() || p.sku}
                         </span>
                       </div>
                     </CardContent>
+
                     <CardFooter className="p-2 sm:p-3 pt-0">
                       {count > 0 ? (
-                        <div className="flex items-center justify-between w-full bg-primary/10 rounded-md sm:rounded-lg p-0.5 sm:p-1 border border-primary/20">
+                        <div className="flex items-center justify-between w-full bg-muted/50 rounded-lg p-0.5 border border-border/50">
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-6 w-6 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 transition-colors"
+                            className="h-7 w-7 text-foreground hover:bg-background hover:text-primary transition-all"
                             onClick={() => count === 1 ? removeItem(p.id) : updateQuantity(p.id, count - 1)}
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="font-bold text-primary text-xs sm:text-sm">{count}</span>
+                          <span className="font-black text-foreground text-xs px-1">{count}</span>
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-6 w-6 sm:h-8 sm:w-8 text-primary hover:bg-primary/20 transition-colors"
+                            className="h-7 w-7 text-foreground hover:bg-background hover:text-primary transition-all"
                             onClick={() => updateQuantity(p.id, count + 1)}
                             disabled={count >= p.stock}
                           >
@@ -266,7 +308,7 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
                         </div>
                       ) : (
                         <Button
-                          className="w-full h-7 sm:h-9 shadow-sm sm:shadow-md shadow-primary/20 font-bold rounded-md sm:rounded-lg active:scale-95 transition-all text-[9px] sm:text-xs group"
+                          className="w-full h-8 bg-zinc-900 text-white hover:bg-primary font-bold rounded-lg transition-all text-[10px] group"
                           onClick={() => addItem({
                             productId: p.id,
                             name: p.name,
@@ -275,7 +317,7 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
                             image: p.image
                           })}
                         >
-                          <Plus className="mr-1 sm:mr-1.5 h-3 w-3 transition-transform group-hover:-translate-y-0.5" />
+                          <Plus className="mr-1 h-3 w-3" />
                           Keranjang
                         </Button>
                       )}
