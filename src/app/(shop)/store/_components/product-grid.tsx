@@ -21,6 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 interface Category {
   id: string
   name: string
+  color?: string | null
   _count: {
     products: number
   }
@@ -43,11 +44,22 @@ interface ProductGridProps {
 }
 
 const CATEGORY_COLORS: Record<string, { bg: string, text: string, border: string, dot: string }> = {
-  "Bahan Pokok": { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200/50", dot: "bg-emerald-500" },
-  "Makanan Berat": { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200/50", dot: "bg-amber-500" },
-  "Makanan Ringan": { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200/50", dot: "bg-rose-500" },
-  "Minuman": { bg: "bg-sky-50", text: "text-sky-700", border: "border-sky-200/50", dot: "bg-sky-500" },
-  "Pencuci Mulut": { bg: "bg-violet-50", text: "text-violet-700", border: "border-violet-200/50", dot: "bg-violet-500" },
+  "Minyak Sachet": { bg: "bg-red-50", text: "text-red-700", border: "border-red-200/50", dot: "bg-red-500" },
+  "Minyak Kemasan": { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200/50", dot: "bg-orange-500" },
+  "Mie Instan": { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200/50", dot: "bg-amber-500" },
+  "Bumbu & Penyedap": { bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200/50", dot: "bg-yellow-500" },
+  "Bahan Pokok": { bg: "bg-lime-50", text: "text-lime-700", border: "border-lime-200/50", dot: "bg-lime-500" },
+  "Kopi & Teh (Sachet)": { bg: "bg-green-50", text: "text-green-700", border: "border-green-200/50", dot: "bg-green-500" },
+  "Susu (Sachet & Bubuk)": { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200/50", dot: "bg-emerald-500" },
+  "Minuman Kemasan": { bg: "bg-teal-50", text: "text-teal-700", border: "border-teal-200/50", dot: "bg-teal-500" },
+  "Minuman Seduh / Cup": { bg: "bg-cyan-50", text: "text-cyan-700", border: "border-cyan-200/50", dot: "bg-cyan-500" },
+  "Jajanan": { bg: "bg-sky-50", text: "text-sky-700", border: "border-sky-200/50", dot: "bg-sky-500" },
+  "Rokok": { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200/50", dot: "bg-blue-500" },
+  "Obat & Kesehatan": { bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200/50", dot: "bg-indigo-500" },
+  "Sabun & Pembersih": { bg: "bg-violet-50", text: "text-violet-700", border: "border-violet-200/50", dot: "bg-violet-500" },
+  "Perawatan Tubuh": { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200/50", dot: "bg-purple-500" },
+  "Popok": { bg: "bg-fuchsia-50", text: "text-fuchsia-700", border: "border-fuchsia-200/50", dot: "bg-fuchsia-500" },
+  "Mainan": { bg: "bg-pink-50", text: "text-pink-700", border: "border-pink-200/50", dot: "bg-pink-500" },
   "default": { bg: "bg-zinc-50", text: "text-zinc-700", border: "border-zinc-200/50", dot: "bg-zinc-500" }
 }
 
@@ -58,6 +70,7 @@ const getCategoryStyle = (name: string) => {
 export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({})
   const { addItem, items, updateQuantity, removeItem } = useCart()
 
   const filteredProducts = initialProducts.filter(p => {
@@ -90,8 +103,8 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
         Semua Produk
       </Button>
       {categories.map((category) => {
-        const style = getCategoryStyle(category.name)
         const isSelected = selectedCategoryId === category.id
+        const catColor = category.color || '#6366f1'
         
         return (
           <Button
@@ -106,23 +119,29 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
             onClick={() => setSelectedCategoryId(category.id)}
           >
             {isSelected && (
-              <div className={cn("absolute left-0 top-3 bottom-3 w-1 rounded-r-full", style.dot)} />
+              <div
+                className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full"
+                style={{ backgroundColor: catColor }}
+              />
             )}
             <span className="flex items-center truncate">
-              <div className={cn(
-                "mr-3 h-2 w-2 rounded-full transition-transform duration-300 group-hover:scale-125",
-                style.dot,
-                !isSelected && "opacity-40"
-              )} />
+              <div
+                className="mr-3 h-2 w-2 rounded-full transition-transform duration-300 group-hover:scale-125"
+                style={{ backgroundColor: catColor, opacity: isSelected ? 1 : 0.4 }}
+              />
               {category.name}
             </span>
             <span
               className={cn(
                 "ml-2 text-[10px] px-2.5 py-0.5 rounded-full font-black min-w-[28px] text-center transition-all duration-300",
-                isSelected 
-                  ? `${style.bg} ${style.text} shadow-sm scale-110` 
+                isSelected
+                  ? "shadow-sm scale-110"
                   : "bg-muted/50 text-muted-foreground/60 group-hover:bg-muted group-hover:text-muted-foreground"
               )}
+              style={isSelected ? {
+                backgroundColor: `${catColor}18`,
+                color: catColor,
+              } : undefined}
             >
               {category._count.products}
             </span>
@@ -225,11 +244,17 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
                 return (
                   <Card key={p.id} className="p-0 gap-0 overflow-hidden border-border/40 group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 bg-card hover:border-primary/30 rounded-xl flex flex-col h-full border">
                     <div className="aspect-[4/3] bg-muted/30 relative overflow-hidden shrink-0">
-                      {p.image ? (
-                        <img src={p.image} alt={p.name} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" />
+                      {p.image && !failedImages[p.id] ? (
+                        <img 
+                          src={p.image} 
+                          alt={p.name} 
+                          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" 
+                          onError={() => setFailedImages(prev => ({ ...prev, [p.id]: true }))}
+                        />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground/20 bg-gradient-to-br from-muted/50 to-muted/30">
-                          <Tag className="h-10 w-10 rotate-12" />
+                        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/30 bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 p-4 text-center">
+                          <Tag className="h-8 w-8 rotate-12 mb-1.5 opacity-60 text-primary" />
+                          <span className="text-[10px] font-bold tracking-tight text-muted-foreground uppercase">{p.category?.name || "Produk"}</span>
                         </div>
                       )}
                       

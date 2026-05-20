@@ -14,6 +14,7 @@ type ProductWithCategory = Product & {
 export function ProductGrid({ products }: { products: ProductWithCategory[] }) {
   const [search, setSearch] = useState("")
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({})
   const { addItem } = useCart()
 
   // Ekstrak daftar kategori unik dari produk yang ada
@@ -143,11 +144,21 @@ export function ProductGrid({ products }: { products: ProductWithCategory[] }) {
               <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
 
               <div className="w-full h-32 bg-muted/30 rounded-xl mb-4 flex items-center justify-center overflow-hidden">
-                {product.image ? (
-                  <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                {product.image && !failedImages[product.id] ? (
+                  <img 
+                    src={product.image} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    onError={() => setFailedImages(prev => ({ ...prev, [product.id]: true }))}
+                  />
                 ) : (
-                  <div className="text-4xl font-black text-muted-foreground/20 uppercase tracking-tighter">
-                    {product.name.slice(0, 2)}
+                  <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/30 bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 p-4 text-center">
+                    <span className="text-2xl font-black text-muted-foreground/45 uppercase tracking-tighter leading-none">
+                      {product.name.slice(0, 2)}
+                    </span>
+                    <span className="text-[9px] font-bold tracking-tight text-muted-foreground/40 uppercase mt-1">
+                      {product.category?.name || "Produk"}
+                    </span>
                   </div>
                 )}
               </div>
