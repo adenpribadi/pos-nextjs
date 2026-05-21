@@ -5,18 +5,19 @@
  * dengan file yang benar-benar ada di folder public/uploads/products/.
  *
  * Aturan:
- *   1. image terisi & file ADA       → normalisasi path ke /uploads/products/{filename}
+ *   1. image terisi & file ADA       → normalisasi path ke /uploads/products/{filename} (update kolom)
  *   2. image terisi & file TIDAK ADA → kosongkan kolom image (set null)
  *   3. image null/kosong             → lewati (tidak disentuh)
- *   4. file di folder, tidak dipakai → hapus file (orphan)
+ *   4. file di folder, tidak dipakai → dilaporkan saja (tidak dihapus kecuali pakai --clean-orphans)
  *
  * ⚠  PENTING: Jalankan script ini HANYA di server tempat file disimpan (VPS).
  *    Jika dijalankan lokal sementara DB mengarah ke production, file di server
  *    bisa terhapus karena dianggap "orphan".
  *
  * Cara jalankan:
- *   npm run sync:images           → dry-run (preview saja, tidak ada perubahan)
- *   npm run sync:images -- --apply → eksekusi nyata
+ *   npm run sync:images                              → dry-run (preview saja)
+ *   npm run sync:images -- --apply                  → update DB (normalisasi + kosongkan kolom yg filenya hilang)
+ *   npm run sync:images -- --apply --clean-orphans  → update DB + hapus file orphan
  */
 
 import { PrismaClient } from "@prisma/client"
@@ -29,22 +30,26 @@ const UPLOADS_DIR = join(process.cwd(), "public", "uploads", "products")
 const URL_PREFIX = "/uploads/products"
 const PROTECTED_FILES = new Set([".gitkeep", ".gitignore"])
 
-// Mode: dry-run (default) atau apply (--apply flag)
-const IS_DRY_RUN = !process.argv.includes("--apply")
+const IS_DRY_RUN    = !process.argv.includes("--apply")
+const CLEAN_ORPHANS = process.argv.includes("--clean-orphans")
 
 function log(msg: string) { console.log(msg) }
-function dryTag() { return IS_DRY_RUN ? " [DRY-RUN]" : "" }
 
 async function main() {
   log("====================================================")
   log("  Sync Gambar Produk: DB <-> public/uploads/products")
   log("====================================================")
+
   if (IS_DRY_RUN) {
     log("  ⚠  MODE DRY-RUN — tidak ada perubahan yang dilakukan")
-    log("     Tambahkan flag --apply untuk eksekusi nyata:")
-    log("     npm run sync:images -- --apply")
+    log("     npm run sync:images -- --apply               → update DB saja")
+    log("     npm run sync:images -- --apply --clean-orphans → update DB + hapus orphan")
+  } else if (CLEAN_ORPHANS) {
+    log("  🚨 MODE APPLY + CLEAN ORPHANS — DB diupdate & file orphan dihapus")
   } else {
-    log("  🚨 MODE APPLY — perubahan akan disimpan ke DB & filesystem")
+    log("  🔧 MODE APPLY — hanya update DB (normalisasi & kosongkan kolom yg filenya hilang)")
+    log("     File orphan di folder hanya dilaporkan, tidak dihapus.")
+    log("     Tambahkan --clean-orphans untuk hapus file orphan.")
   }
   log("")
 
@@ -56,8 +61,7 @@ async function main() {
     log("   Semua kolom image yang terisi akan dikosongkan.\n")
   } else {
     const allFiles = readdirSync(UPLOADS_DIR).filter((f) => {
-      const fullPath = join(UPLOADS_DIR, f)
-      return statSync(fullPath).isFile() // hanya file, bukan subfolder
+      return statSync(join(UPLOADS_DIR, f)).isFile()
     })
     filesInFolder = new Set(allFiles)
     log(`📁 File ditemukan di folder : ${filesInFolder.size} file`)
@@ -88,7 +92,7 @@ async function main() {
     const filename = basename(rawImage)
 
     if (!filename) {
-      log(`  🗑 ${dryTag()} [KOSONGKAN] "${product.name}" — path tidak valid: "${rawImage}"`)
+      log(`  🗑  [KOSONGKAN${IS_DRY_RUN ? " - DRY" : ""}] "${product.name}" — path tidak valid: "${rawImage}"`)
       if (!IS_DRY_RUN) {
         await prisma.product.update({ where: { id: product.id }, data: { image: null } })
       }
@@ -100,12 +104,14 @@ async function main() {
     const normalizedPath = `${URL_PREFIX}/${filename}`
 
     if (fileExists) {
-      usedFilenames.add(filename)
+      usedFilenames.add(filename) // file ini dipakai, jangan dihapus
 
       if (rawImage === normalizedPath) {
+        // ✅ File ada & path sudah benar — tidak perlu diubah apapun
         countOk++
       } else {
-        log(`  ✏️ ${dryTag()} [NORMALISASI] "${product.name}"`)
+        // ✏️ File ada tapi path di kolom perlu dinormalisasi
+        log(`  ✏️  [NORMALISASI${IS_DRY_RUN ? " - DRY" : ""}] "${product.name}"`)
         log(`       Dari : ${rawImage}`)
         log(`       Ke   : ${normalizedPath}`)
         if (!IS_DRY_RUN) {
@@ -114,7 +120,8 @@ async function main() {
         countFixed++
       }
     } else {
-      log(`  🗑 ${dryTag()} [KOSONGKAN] "${product.name}" — file tidak ditemukan: "${filename}"`)
+      // 🗑 File tidak ada di folder → kosongkan kolom
+      log(`  🗑  [KOSONGKAN${IS_DRY_RUN ? " - DRY" : ""}] "${product.name}" — file tidak ditemukan: "${filename}"`)
       if (!IS_DRY_RUN) {
         await prisma.product.update({ where: { id: product.id }, data: { image: null } })
       }
@@ -123,65 +130,70 @@ async function main() {
   }
 
   // ── SAFETY CHECK ─────────────────────────────────────────────────────────
-  const activeFiles = filesInFolder.size - PROTECTED_FILES.size
-  if (products.length > 0 && usedFilenames.size === 0 && activeFiles > 0) {
+  const hasRealFiles = [...filesInFolder].some((f) => !PROTECTED_FILES.has(f))
+  if (products.length > 0 && usedFilenames.size === 0 && hasRealFiles) {
     log("\n⛔ PERINGATAN KRITIS: Nol file cocok antara DB dan folder!")
     log("   Kemungkinan script dijalankan di lingkungan yang salah")
     log("   (misalnya: lokal, sementara DB mengarah ke production).")
-    log("   Penghapusan orphan DIBATALKAN untuk mencegah data hilang.\n")
-
-    log("====================================================")
-    log("  HASIL (DIBATALKAN)")
-    log("====================================================")
-    log(`  ⛔ Orphan deletion dibatalkan — kemungkinan environment salah`)
-    log("====================================================\n")
+    log("   Laporan orphan DIBATALKAN untuk mencegah data hilang.\n")
     return
   }
 
-  // ── BAGIAN 2: Hapus File Orphan ──────────────────────────────────────────
-  log("\n── [2/2] Deteksi & Hapus File Orphan ──────────────\n")
-
-  let countOrphanDeleted = 0
-  let countOrphanSkipped = 0
-
+  // ── BAGIAN 2: Laporan / Hapus File Orphan ────────────────────────────────
+  const orphans: string[] = []
   for (const filename of filesInFolder) {
-    if (PROTECTED_FILES.has(filename)) continue
-
-    if (!usedFilenames.has(filename)) {
-      log(`  🗑 ${dryTag()} [HAPUS ORPHAN] ${filename}`)
-      if (!IS_DRY_RUN) {
-        try {
-          unlinkSync(join(UPLOADS_DIR, filename))
-          countOrphanDeleted++
-        } catch (err) {
-          log(`  ❌ [GAGAL HAPUS] ${filename}: ${err}`)
-          countOrphanSkipped++
-        }
-      } else {
-        countOrphanDeleted++ // hitung sebagai "akan dihapus"
-      }
+    if (!PROTECTED_FILES.has(filename) && !usedFilenames.has(filename)) {
+      orphans.push(filename)
     }
   }
 
-  if (countOrphanDeleted === 0 && countOrphanSkipped === 0) {
+  log(`\n── [2/2] File Orphan (ada di folder, tidak dipakai DB) ─\n`)
+
+  let countOrphanDeleted = 0
+  let countOrphanFailed  = 0
+
+  if (orphans.length === 0) {
     log("  ✅ Tidak ada file orphan ditemukan.")
+  } else {
+    for (const filename of orphans) {
+      if (CLEAN_ORPHANS && !IS_DRY_RUN) {
+        try {
+          unlinkSync(join(UPLOADS_DIR, filename))
+          log(`  🗑  [HAPUS ORPHAN] ${filename}`)
+          countOrphanDeleted++
+        } catch (err) {
+          log(`  ❌  [GAGAL HAPUS] ${filename}: ${err}`)
+          countOrphanFailed++
+        }
+      } else {
+        log(`  📄  [ORPHAN] ${filename}`)
+      }
+    }
+
+    if (!CLEAN_ORPHANS || IS_DRY_RUN) {
+      log(`\n  ℹ  ${orphans.length} file orphan ditemukan tapi TIDAK dihapus.`)
+      log("     Tambahkan --clean-orphans untuk menghapusnya.")
+    }
   }
 
   // ── RINGKASAN ─────────────────────────────────────────────────────────────
   log("\n====================================================")
   log(`  HASIL SINKRONISASI${IS_DRY_RUN ? " (DRY-RUN)" : ""}`)
   log("====================================================")
-  log(`  ✅ DB: Sudah benar (tidak diubah)  : ${countOk} produk`)
-  log(`  ✏️  DB: Dinormalisasi                : ${countFixed} produk${IS_DRY_RUN ? " (belum disimpan)" : ""}`)
-  log(`  🗑  DB: Dikosongkan (file hilang)    : ${countCleared} produk${IS_DRY_RUN ? " (belum disimpan)" : ""}`)
-  log(`  🗑  Folder: Orphan ${IS_DRY_RUN ? "akan dihapus" : "dihapus"}        : ${countOrphanDeleted} file`)
-  if (countOrphanSkipped > 0) {
-    log(`  ❌  Folder: Gagal dihapus            : ${countOrphanSkipped} file`)
+  log(`  ✅ DB: OK — file ada & path benar : ${countOk} produk`)
+  log(`  ✏️  DB: Normalisasi path            : ${countFixed} produk${IS_DRY_RUN ? " (belum disimpan)" : ""}`)
+  log(`  🗑  DB: Dikosongkan (file hilang)   : ${countCleared} produk${IS_DRY_RUN ? " (belum disimpan)" : ""}`)
+  log(`  📄  Folder: Orphan ditemukan        : ${orphans.length} file`)
+  if (CLEAN_ORPHANS && !IS_DRY_RUN) {
+    log(`  🗑  Folder: Orphan dihapus          : ${countOrphanDeleted} file`)
+    if (countOrphanFailed > 0) {
+      log(`  ❌  Folder: Gagal dihapus           : ${countOrphanFailed} file`)
+    }
   }
-  if (IS_DRY_RUN && (countFixed > 0 || countCleared > 0 || countOrphanDeleted > 0)) {
+  if (IS_DRY_RUN && (countFixed > 0 || countCleared > 0 || orphans.length > 0)) {
     log("")
-    log("  ➡  Jalankan dengan --apply untuk eksekusi:")
-    log("     npm run sync:images -- --apply")
+    log("  ➡  Jalankan dengan --apply untuk eksekusi DB updates.")
+    log("     Tambahkan --clean-orphans untuk hapus file orphan juga.")
   }
   log("====================================================\n")
 }
