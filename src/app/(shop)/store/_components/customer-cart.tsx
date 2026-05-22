@@ -124,10 +124,10 @@ export function CustomerCart() {
   return (
     <div className="fixed bottom-6 right-6 z-50">
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger className="h-16 w-16 rounded-2xl shadow-2xl shadow-primary/20 relative group bg-zinc-900 text-white flex items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all hover:bg-zinc-800 hover:-translate-y-1 active:scale-95 border border-white/10">
+        <SheetTrigger className="h-16 w-16 rounded-2xl shadow-xl shadow-primary/30 relative group bg-primary text-primary-foreground flex items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all hover:-translate-y-1 active:scale-95 border border-primary-foreground/10 hover:shadow-2xl hover:shadow-primary/40">
           <ShoppingCart className="h-6 w-6 group-hover:scale-110 transition-transform" />
           {isMounted && totalItems > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center border-2 border-background shadow-lg shadow-primary/40 animate-in zoom-in">
+            <span className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-destructive text-destructive-foreground text-[10px] font-black flex items-center justify-center border-2 border-background shadow-lg shadow-destructive/40 animate-in zoom-in">
               {totalItems}
             </span>
           )}
@@ -337,7 +337,7 @@ export function CustomerCart() {
             <div className="p-4 sm:p-6 bg-background border-t shrink-0">
               <SheetFooter className="sm:flex-col gap-2">
                 <Button
-                  className="w-full h-14 text-base font-black shadow-xl shadow-primary/10 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white transition-all active:scale-95"
+                  className="w-full h-14 text-base font-black shadow-lg shadow-primary/20 rounded-2xl bg-primary hover:bg-primary/95 text-primary-foreground transition-all active:scale-95 border-none"
                   size="lg"
                   onClick={handleCheckout}
                   disabled={isSubmitting}
@@ -349,7 +349,7 @@ export function CustomerCart() {
                       <span>
                         {paymentMethod === "TRANSFER" ? "Konfirmasi & Bayar" : "Proses Pembayaran"}
                       </span>
-                      <div className="h-6 w-[1px] bg-white/20 mx-1" />
+                      <div className="h-6 w-[1px] bg-primary-foreground/20 mx-1" />
                       <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </div>
                   )}
