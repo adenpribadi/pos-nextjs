@@ -46,6 +46,13 @@ interface ProductColumn {
   status: string
   image?: string | null
   categoryId?: string
+  updatedAt?: string
+  updatedBy?: {
+    id: string
+    name: string | null
+    email: string | null
+    role: string
+  } | null
 }
 
 interface Category {
@@ -58,17 +65,22 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<ProductColumn | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<ProductColumn | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isCompressing, setIsCompressing] = useState(false)
   const [compressedFile, setCompressedFile] = useState<File | null>(null)
-  const { canManageProducts, isLoading } = usePermissions()
+  const { canManageProducts, isLoading, role } = usePermissions()
 
   // Pricing states for margin calculation
   const [addCostPrice, setAddCostPrice] = useState<string>("")
   const [addPrice, setAddPrice] = useState<string>("")
   const [editCostPrice, setEditCostPrice] = useState<string>("")
   const [editPrice, setEditPrice] = useState<string>("")
+
+  // SKU validation states
+  const [addSku, setAddSku] = useState<string>("")
+  const [editSku, setEditSku] = useState<string>("")
 
   // Barcode scanner target
   const [scanTarget, setScanTarget] = useState<'add' | 'edit' | null>(null)
@@ -128,6 +140,7 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
       setEditCostPrice(editingProduct.costPrice?.toString() || "")
       setEditPrice(editingProduct.price?.toString() || "")
       setEditSelectedCategoryId(editingProduct.categoryId || "")
+      setEditSku(editingProduct.sku)
       setShowEditCategoryInput(false)
       setNewEditCategoryName("")
       // Reset stock adjustment form
@@ -138,6 +151,7 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
     } else {
       setEditCostPrice("")
       setEditPrice("")
+      setEditSku("")
       setEditSelectedCategoryId("")
       setShowEditCategoryInput(false)
       setNewEditCategoryName("")
@@ -153,6 +167,7 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
     if (!isAddOpen) {
       setAddCostPrice("")
       setAddPrice("")
+      setAddSku("")
       setSelectedCategoryId("")
       setShowAddCategoryInput(false)
       setNewCategoryName("")
@@ -251,17 +266,9 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
               toast.success(`Scan Berhasil: ${decodedText}`);
               
               if (scanTarget === 'add') {
-                const skuInput = document.getElementById("sku") as HTMLInputElement;
-                if (skuInput) {
-                  skuInput.value = decodedText;
-                  skuInput.dispatchEvent(new Event('change', { bubbles: true }));
-                }
+                setAddSku(decodedText);
               } else if (scanTarget === 'edit') {
-                const skuInput = document.getElementById("edit-sku") as HTMLInputElement;
-                if (skuInput) {
-                  skuInput.value = decodedText;
-                  skuInput.dispatchEvent(new Event('change', { bubbles: true }));
-                }
+                setEditSku(decodedText);
               }
               
               setScanTarget(null);
@@ -610,7 +617,11 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
                 paginatedDesktopData.map((item) => (
                   <TableRow key={item.id} className="transition-colors hover:bg-muted/40">
                     <TableCell>
-                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden border border-border/50">
+                      <div 
+                        onClick={() => setSelectedProduct(item)}
+                        className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden border border-border/50 cursor-pointer hover:scale-105 hover:border-primary/50 transition-all"
+                        title="Lihat Detail Produk"
+                      >
                         {item.image ? (
                           <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                         ) : (
@@ -644,6 +655,13 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
                           <MoreHorizontal className="h-4 w-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            className="cursor-pointer"
+                            onClick={() => setSelectedProduct(item)}
+                          >
+                            <Search className="mr-2 h-4 w-4" />
+                            <span>Detail</span>
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="cursor-pointer"
                             onClick={() => {
@@ -766,7 +784,11 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
             paginatedMobileData.map((item) => (
               <div key={item.id} className="bg-background/50 border border-border/50 rounded-2xl p-4 space-y-4 shadow-sm relative">
                 <div className="flex items-start gap-4">
-                  <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center overflow-hidden border border-border/50 shrink-0">
+                  <div 
+                    onClick={() => setSelectedProduct(item)}
+                    className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center overflow-hidden border border-border/50 shrink-0 cursor-pointer hover:scale-105 transition-all"
+                    title="Lihat Detail Produk"
+                  >
                     {item.image ? (
                       <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                     ) : (
@@ -784,6 +806,11 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
                           <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem 
+                            onClick={() => setSelectedProduct(item)}
+                          >
+                            <Search className="mr-2 h-4 w-4" /> Detail Produk
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => {
                               if (!canManageProducts) return toast.error("Akses Ditolak")
@@ -920,13 +947,31 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
                       <Scan className="h-3 w-3" /> Scan Barcode
                     </button>
                   </div>
-                    <Input 
-                      id="sku" 
-                      name="sku" 
-                      placeholder="Misal: ITM-001" 
-                      required 
-                      className="h-10 text-xs px-3 rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
-                    />
+                    {(() => {
+                      const isDuplicate = addSku.trim() !== "" && data.some(p => p.sku.toLowerCase() === addSku.trim().toLowerCase())
+                      return (
+                        <>
+                          <Input 
+                            id="sku" 
+                            name="sku" 
+                            placeholder="Misal: ITM-001" 
+                            required 
+                            value={addSku}
+                            onChange={(e) => setAddSku(e.target.value)}
+                            className={`h-10 text-xs px-3 rounded-xl border bg-background/50 focus-visible:ring-2 ${
+                              isDuplicate
+                                ? "border-destructive focus-visible:ring-destructive/20 text-destructive"
+                                : "border-input focus-visible:ring-primary/20"
+                            }`}
+                          />
+                          {isDuplicate && (
+                            <p className="text-[10px] text-destructive font-semibold mt-0.5 flex items-center gap-1">
+                              <span>⚠</span> SKU ini sudah digunakan produk lain.
+                            </p>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="categoryId" className="text-xs font-semibold text-muted-foreground/90">
@@ -1088,7 +1133,7 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
             <div className="p-3 bg-muted/30 border-t border-border/50 flex flex-col gap-2 shrink-0 sm:flex-row-reverse sm:gap-2">
               <Button 
                 type="submit" 
-                disabled={isSubmitting || isCompressing}
+                disabled={isSubmitting || isCompressing || (addSku.trim() !== "" && data.some(p => p.sku.toLowerCase() === addSku.trim().toLowerCase()))}
                 className="w-full sm:w-auto h-11 text-sm font-semibold rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/95 transition-colors shadow-sm"
               >
                 {isSubmitting ? (
@@ -1176,13 +1221,32 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
                         <Scan className="h-3 w-3" /> Scan Barcode
                       </button>
                     </div>
-                      <Input 
-                        id="edit-sku" 
-                        name="sku" 
-                        defaultValue={editingProduct.sku} 
-                        required 
-                        className="h-10 text-xs px-3 rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
-                      />
+                      {(() => {
+                        const isDuplicate = editSku.trim() !== "" &&
+                          editSku.trim().toLowerCase() !== editingProduct.sku.toLowerCase() &&
+                          data.some(p => p.sku.toLowerCase() === editSku.trim().toLowerCase())
+                        return (
+                          <>
+                            <Input 
+                              id="edit-sku" 
+                              name="sku" 
+                              value={editSku}
+                              onChange={(e) => setEditSku(e.target.value)}
+                              required 
+                              className={`h-10 text-xs px-3 rounded-xl border bg-background/50 focus-visible:ring-2 ${
+                                isDuplicate
+                                  ? "border-destructive focus-visible:ring-destructive/20 text-destructive"
+                                  : "border-input focus-visible:ring-primary/20"
+                              }`}
+                            />
+                            {isDuplicate && (
+                              <p className="text-[10px] text-destructive font-semibold mt-0.5 flex items-center gap-1">
+                                <span>⚠</span> SKU ini sudah digunakan produk lain.
+                              </p>
+                            )}
+                          </>
+                        )
+                      })()}
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor="edit-categoryId" className="text-xs font-semibold text-muted-foreground/90">
@@ -1404,7 +1468,11 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
               <div className="p-3 bg-muted/30 border-t border-border/50 flex flex-col gap-2 shrink-0 sm:flex-row-reverse sm:gap-2">
                 <Button 
                   type="submit" 
-                  disabled={isSubmitting || isCompressing}
+                  disabled={isSubmitting || isCompressing || (editingProduct ? (
+                    editSku.trim() !== "" &&
+                    editSku.trim().toLowerCase() !== editingProduct.sku.toLowerCase() &&
+                    data.some(p => p.sku.toLowerCase() === editSku.trim().toLowerCase())
+                  ) : false)}
                   className="w-full sm:w-auto h-11 text-sm font-semibold rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/95 transition-colors shadow-sm"
                 >
                   {isSubmitting ? (
@@ -1472,6 +1540,115 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
             >
               Batal
             </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Product Dialog */}
+      <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>
+        <DialogContent className="max-w-[480px] w-[calc(100%-1.5rem)] p-0 gap-0 overflow-hidden flex flex-col max-h-[90vh] rounded-2xl border-none shadow-xl bg-card">
+          <DialogHeader className="p-4 pb-3 border-b border-border/50 shrink-0">
+            <DialogTitle className="text-base font-semibold text-foreground">Detail Produk</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(90vh-120px)] scrollbar-thin">
+              {/* Product Photo section */}
+              <div className="flex justify-center">
+                <div className="relative w-full max-w-[240px] aspect-square rounded-2xl bg-muted overflow-hidden border border-border/50 shadow-inner flex items-center justify-center group">
+                  {selectedProduct.image ? (
+                    <img 
+                      src={selectedProduct.image} 
+                      alt={selectedProduct.name} 
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                    />
+                  ) : (
+                    <div className="text-center p-4">
+                      <Plus className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+                      <span className="text-xs text-muted-foreground/60 font-medium">Tidak ada foto</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Main Info */}
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="font-mono text-[10px] tracking-wide bg-muted/40 uppercase">
+                    {selectedProduct.sku}
+                  </Badge>
+                  <Badge variant={selectedProduct.status === "Tersedia" ? "default" : "destructive"} className="h-5 text-[10px] bg-primary/20 text-primary hover:bg-primary/30 border-transparent">
+                    {selectedProduct.status}
+                  </Badge>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground leading-tight">{selectedProduct.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{selectedProduct.category}</p>
+                </div>
+              </div>
+
+              {/* Product Details Grid */}
+              <div className="grid grid-cols-2 gap-3 bg-muted/30 p-3.5 rounded-xl border border-border/30">
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Stok Fisik</span>
+                  <p className={`text-base font-black mt-0.5 ${selectedProduct.stock <= 5 ? "text-destructive" : "text-foreground"}`}>
+                    {selectedProduct.stock} <span className="text-[10px] font-normal text-muted-foreground">Unit</span>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-primary uppercase font-bold tracking-wider">Harga Jual</span>
+                  <p className="text-base font-black text-foreground mt-0.5">
+                    Rp {selectedProduct.price.toLocaleString('id-ID')}
+                  </p>
+                </div>
+                {(role === "ADMIN" || role === "MANAGER") && (
+                  <div className="pt-2 border-t border-border/30 col-span-2 flex justify-between items-center">
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider font-semibold">Harga Beli / HPP</span>
+                    <span className="text-sm font-mono font-semibold text-muted-foreground/80">
+                      Rp {selectedProduct.costPrice.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Update Log / Metadata */}
+              <div className="bg-primary/5 dark:bg-muted/10 p-3.5 rounded-xl border border-primary/10 dark:border-border/30 text-xs space-y-2">
+                <div className="flex justify-between items-center text-muted-foreground">
+                  <span className="font-semibold text-[10px] uppercase tracking-wider">Terakhir Diupdate</span>
+                  <span className="font-semibold text-foreground font-mono">
+                    {selectedProduct.updatedAt 
+                      ? new Date(selectedProduct.updatedAt).toLocaleString('id-ID', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short'
+                        }) 
+                      : 'Belum ada data'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-muted-foreground pt-1.5 border-t border-border/20">
+                  <span className="font-semibold text-[10px] uppercase tracking-wider">Oleh</span>
+                  <span className="font-semibold text-foreground">
+                    {selectedProduct.updatedBy ? (
+                      <>
+                        {selectedProduct.updatedBy.name || 'User'} 
+                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md ml-1 font-semibold uppercase">
+                          {selectedProduct.updatedBy.role}
+                        </span>
+                      </>
+                    ) : (
+                      'Sistem / Default'
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="p-3 bg-muted/30 border-t border-border/50 flex justify-end shrink-0">
+            <Button 
+              type="button" 
+              onClick={() => setSelectedProduct(null)}
+              className="w-full sm:w-auto h-10 text-xs font-semibold rounded-xl"
+            >
+              Tutup
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

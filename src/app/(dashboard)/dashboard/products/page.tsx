@@ -7,6 +7,7 @@ export default async function ProductsPage() {
   const products = await prisma.product.findMany({
     include: {
       category: true,
+      updatedBy: true,
     },
     orderBy: {
       createdAt: "desc"
@@ -31,6 +32,13 @@ export default async function ProductsPage() {
     status: product.stock > 0 ? "Tersedia" : "Habis",
     image: product.image,
     categoryId: product.categoryId || "",
+    updatedAt: product.updatedAt.toISOString(),
+    updatedBy: product.updatedBy ? {
+      id: product.updatedBy.id,
+      name: product.updatedBy.name,
+      email: product.updatedBy.email,
+      role: product.updatedBy.role,
+    } : null,
   }))
 
   return (

@@ -41,6 +41,7 @@ model User {
   approvedShipments SupplyShipment[] @relation("AdminApprovals")
   accounts      Account[]
   sessions      Session[]
+  updatedProducts Product[] @relation("ProductUpdates")
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -137,6 +138,9 @@ model Product {
   saleItems     SaleItem[]
   inventoryLogs InventoryTransaction[]
   supplyShipments SupplyShipment[]
+  
+  updatedById   String?
+  updatedBy     User?     @relation("ProductUpdates", fields: [updatedById], references: [id])
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

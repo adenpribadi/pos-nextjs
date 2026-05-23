@@ -84,6 +84,7 @@ export async function createProduct(formData: FormData) {
           stock,
           image: imagePath,
           categoryId: categoryId === "" ? null : categoryId,
+          updatedById: session.user.id,
         }
       })
 
@@ -187,6 +188,7 @@ export async function updateProduct(formData: FormData) {
         costPrice,
         ...(imagePath !== undefined && { image: imagePath }),
         categoryId: categoryId === "" ? null : categoryId,
+        updatedById: session.user.id,
       }
     })
 
@@ -400,7 +402,8 @@ export async function adjustProductStock(formData: FormData) {
         await tx.product.update({
           where: { id: productId },
           data: {
-            stock: newStock
+            stock: newStock,
+            updatedById: session.user.id,
           }
         })
 
