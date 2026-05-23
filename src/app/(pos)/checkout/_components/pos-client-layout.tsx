@@ -8,11 +8,25 @@ import { ShoppingCart, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/hooks/useCart"
 
-type ProductWithCategory = Product & {
+type ProductWithCategory = Omit<Product, "price" | "costPrice"> & {
+  price: number
+  costPrice: number | null
   category: Category | null
 }
 
-export function POSClientLayout({ initialProducts }: { initialProducts: ProductWithCategory[] }) {
+interface POSClientLayoutProps {
+  initialProducts: ProductWithCategory[]
+  initialHasMore: boolean
+  categories: (Category & { productCount: number })[]
+  totalCount: number
+}
+
+export function POSClientLayout({
+  initialProducts,
+  initialHasMore,
+  categories,
+  totalCount,
+}: POSClientLayoutProps) {
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false)
   const { getTotalItems } = useCart()
   const itemsCount = getTotalItems()
@@ -21,7 +35,12 @@ export function POSClientLayout({ initialProducts }: { initialProducts: ProductW
     <div className="flex h-full w-full bg-muted/20 relative overflow-hidden">
       {/* Kiri: Katalog Produk (Grid) */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 scrollbar-hide pb-24 lg:pb-6">
-        <ProductGrid products={initialProducts} />
+        <ProductGrid
+          initialProducts={initialProducts}
+          initialHasMore={initialHasMore}
+          categories={categories}
+          totalCount={totalCount}
+        />
       </div>
 
       {/* Mobile Cart Overlay Backdrop */}

@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
-import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Scan, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -31,8 +31,9 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
-import { createProduct, updateProduct, deleteProduct } from "@/app/actions/product"
+import { createProduct, updateProduct, deleteProduct, createCategory, adjustProductStock } from "@/app/actions/product"
 import { Loader2 } from "lucide-react"
+import { Html5Qrcode } from "html5-qrcode"
 
 interface ProductColumn {
   id: string
@@ -63,12 +64,234 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
   const [compressedFile, setCompressedFile] = useState<File | null>(null)
   const { canManageProducts, isLoading } = usePermissions()
 
+  // Pricing states for margin calculation
+  const [addCostPrice, setAddCostPrice] = useState<string>("")
+  const [addPrice, setAddPrice] = useState<string>("")
+  const [editCostPrice, setEditCostPrice] = useState<string>("")
+  const [editPrice, setEditPrice] = useState<string>("")
+
+  // Barcode scanner target
+  const [scanTarget, setScanTarget] = useState<'add' | 'edit' | null>(null)
+
+  // Local categories state to allow immediate inline updates
+  const [localCategories, setLocalCategories] = useState<Category[]>(categories)
+  
+  // Category creation states
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("")
+  const [showAddCategoryInput, setShowAddCategoryInput] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState("")
+  
+  const [editSelectedCategoryId, setEditSelectedCategoryId] = useState<string>("")
+  const [showEditCategoryInput, setShowEditCategoryInput] = useState(false)
+  const [editNewCategoryName, setNewEditCategoryName] = useState("")
+  
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false)
+
+  // Stock adjustment states
+  const [showAdjustStockForm, setShowAdjustStockForm] = useState(false)
+  const [adjType, setAdjType] = useState<'in' | 'out' | 'set'>('in')
+  const [adjQty, setAdjQty] = useState("")
+  const [adjNotes, setAdjNotes] = useState("")
+  const [isAdjustingStock, setIsAdjustingStock] = useState(false)
+
+  // Sorting states
+  const [sortField, setSortField] = useState<'sku' | 'name' | 'category' | 'costPrice' | 'price' | 'stock' | 'status' | null>(null)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+
+  // Pagination & Infinite Scroll states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [visibleMobileCount, setVisibleMobileCount] = useState(10)
+  const mobileSentinelRef = useRef<HTMLDivElement | null>(null)
+
+  // Reset pagination on search
+  useEffect(() => {
+    setCurrentPage(1)
+    setVisibleMobileCount(10)
+  }, [searchTerm])
+
+  // Sync prop changes
+  useEffect(() => {
+    setLocalCategories(categories)
+  }, [categories])
+
   useEffect(() => {
     const query = searchParams.get("search")
     if (query !== null) {
       setSearchTerm(query)
     }
   }, [searchParams])
+
+  // Sync pricing values for edit form
+  useEffect(() => {
+    if (editingProduct) {
+      setEditCostPrice(editingProduct.costPrice?.toString() || "")
+      setEditPrice(editingProduct.price?.toString() || "")
+      setEditSelectedCategoryId(editingProduct.categoryId || "")
+      setShowEditCategoryInput(false)
+      setNewEditCategoryName("")
+      // Reset stock adjustment form
+      setShowAdjustStockForm(false)
+      setAdjType('in')
+      setAdjQty("")
+      setAdjNotes("")
+    } else {
+      setEditCostPrice("")
+      setEditPrice("")
+      setEditSelectedCategoryId("")
+      setShowEditCategoryInput(false)
+      setNewEditCategoryName("")
+      setShowAdjustStockForm(false)
+      setAdjType('in')
+      setAdjQty("")
+      setAdjNotes("")
+    }
+  }, [editingProduct])
+
+  // Reset pricing values on add close
+  useEffect(() => {
+    if (!isAddOpen) {
+      setAddCostPrice("")
+      setAddPrice("")
+      setSelectedCategoryId("")
+      setShowAddCategoryInput(false)
+      setNewCategoryName("")
+    }
+  }, [isAddOpen])
+
+  const handleSaveCategory = async () => {
+    if (!newCategoryName.trim()) return
+    setIsCreatingCategory(true)
+    const res = await createCategory(newCategoryName)
+    if (res.success && res.category) {
+      toast.success("Kategori baru berhasil ditambahkan")
+      setLocalCategories((prev) => {
+        if (prev.some((c) => c.id === res.category.id)) return prev
+        return [...prev, res.category]
+      })
+      setSelectedCategoryId(res.category.id)
+      setShowAddCategoryInput(false)
+      setNewCategoryName("")
+    } else {
+      toast.error(res.error || "Gagal menambahkan kategori")
+    }
+    setIsCreatingCategory(false)
+  }
+
+  const handleSaveEditCategory = async () => {
+    if (!editNewCategoryName.trim()) return
+    setIsCreatingCategory(true)
+    const res = await createCategory(editNewCategoryName)
+    if (res.success && res.category) {
+      toast.success("Kategori baru berhasil ditambahkan")
+      setLocalCategories((prev) => {
+        if (prev.some((c) => c.id === res.category.id)) return prev
+        return [...prev, res.category]
+      })
+      setEditSelectedCategoryId(res.category.id)
+      setShowEditCategoryInput(false)
+      setNewEditCategoryName("")
+    } else {
+      toast.error(res.error || "Gagal menambahkan kategori")
+    }
+    setIsCreatingCategory(false)
+  }
+
+  const handleSaveStockAdjustment = async () => {
+    if (!editingProduct || !adjQty.trim()) return
+    
+    const qtyVal = parseInt(adjQty)
+    if (isNaN(qtyVal) || (adjType !== 'set' && qtyVal <= 0) || (adjType === 'set' && qtyVal < 0)) {
+      toast.error(adjType === 'set' ? "Stok akhir wajib berupa angka non-negatif" : "Jumlah wajib berupa angka positif")
+      return
+    }
+    
+    setIsAdjustingStock(true)
+    
+    const formData = new FormData()
+    formData.append("productId", editingProduct.id)
+    formData.append("type", adjType)
+    formData.append("value", qtyVal.toString())
+    formData.append("notes", adjNotes.trim() || "Penyesuaian stok manual")
+    
+    const res = await adjustProductStock(formData)
+    if (res.success && res.newStock !== undefined) {
+      toast.success("Stok berhasil diperbarui")
+      setEditingProduct(prev => {
+        if (!prev) return null
+        return {
+          ...prev,
+          stock: res.newStock
+        }
+      })
+      setShowAdjustStockForm(false)
+      setAdjQty("")
+      setAdjNotes("")
+    } else {
+      toast.error(res.error || "Gagal menyesuaikan stok")
+    }
+    setIsAdjustingStock(false)
+  }
+
+  // Scanner lifecycle controller
+  useEffect(() => {
+    let html5QrCode: any = null;
+    
+    if (scanTarget) {
+      const timer = setTimeout(() => {
+        try {
+          html5QrCode = new Html5Qrcode("barcode-scanner-viewport");
+          
+          html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 15,
+            },
+            (decodedText: string) => {
+              toast.success(`Scan Berhasil: ${decodedText}`);
+              
+              if (scanTarget === 'add') {
+                const skuInput = document.getElementById("sku") as HTMLInputElement;
+                if (skuInput) {
+                  skuInput.value = decodedText;
+                  skuInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+              } else if (scanTarget === 'edit') {
+                const skuInput = document.getElementById("edit-sku") as HTMLInputElement;
+                if (skuInput) {
+                  skuInput.value = decodedText;
+                  skuInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+              }
+              
+              setScanTarget(null);
+            },
+            () => {
+              // Ignored - noise frames during camera start
+            }
+          ).catch((err: any) => {
+            console.error("Camera start error:", err);
+            toast.error("Gagal Mengakses Kamera", {
+              description: "Pastikan izin akses kamera perangkat Anda diaktifkan."
+            });
+            setScanTarget(null);
+          });
+        } catch (e) {
+          console.error("Scanner initialization failed:", e);
+          setScanTarget(null);
+        }
+      }, 300);
+      
+      return () => {
+        clearTimeout(timer);
+        if (html5QrCode) {
+          html5QrCode.stop().catch((e: any) => {
+            console.error("Scanner stop error:", e);
+          });
+        }
+      };
+    }
+  }, [scanTarget])
 
   const handleAddClick = () => {
     if (!canManageProducts) {
@@ -219,6 +442,124 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
     item.sku.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const sortedData = [...filteredData].sort((a, b) => {
+    if (!sortField) return 0
+    let aVal = a[sortField]
+    let bVal = b[sortField]
+
+    if (aVal === undefined || aVal === null) return 1
+    if (bVal === undefined || bVal === null) return -1
+
+    if (typeof aVal === 'string' && typeof bVal === 'string') {
+      return sortOrder === 'asc'
+        ? aVal.localeCompare(bVal, 'id')
+        : bVal.localeCompare(aVal, 'id')
+    }
+
+    if (typeof aVal === 'number' && typeof bVal === 'number') {
+      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal
+    }
+
+    return 0
+  })
+
+  const totalPages = Math.ceil(sortedData.length / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const paginatedDesktopData = sortedData.slice(startIndex, startIndex + pageSize)
+  const paginatedMobileData = sortedData.slice(0, visibleMobileCount)
+
+  const handleSort = (field: 'sku' | 'name' | 'category' | 'costPrice' | 'price' | 'stock' | 'status') => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const renderSortableHeader = (
+    field: 'sku' | 'name' | 'category' | 'costPrice' | 'price' | 'stock' | 'status',
+    label: string,
+    widthClass?: string,
+    align: 'left' | 'center' | 'right' = 'left'
+  ) => {
+    const isSorted = sortField === field
+    const alignmentClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
+    const justifyClass = align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start'
+
+    return (
+      <TableHead className={`${widthClass || ''} p-0 ${alignmentClass}`}>
+        <button
+          type="button"
+          onClick={() => handleSort(field)}
+          className={`w-full px-4 py-3 inline-flex items-center gap-1 hover:text-foreground cursor-pointer transition-colors font-bold uppercase text-[10px] tracking-wider ${
+            isSorted ? 'text-foreground font-extrabold' : 'text-muted-foreground/80'
+          } ${justifyClass}`}
+        >
+          <span>{label}</span>
+          {isSorted ? (
+            sortOrder === 'asc' ? (
+              <ArrowUp className="h-3.5 w-3.5 text-primary shrink-0 ml-0.5" />
+            ) : (
+              <ArrowDown className="h-3.5 w-3.5 text-primary shrink-0 ml-0.5" />
+            )
+          ) : (
+            <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/30 hover:text-muted-foreground/60 shrink-0 ml-0.5" />
+          )}
+        </button>
+      </TableHead>
+    )
+  }
+
+  // Adjust page if current page becomes invalid (e.g. after deletion)
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages)
+    }
+  }, [totalPages, currentPage])
+
+  // Infinite Scroll Observer for Mobile
+  useEffect(() => {
+    const sentinel = mobileSentinelRef.current
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleMobileCount((prev) => {
+            if (prev < filteredData.length) {
+              return prev + 5
+            }
+            return prev
+          })
+        }
+      },
+      { threshold: 0.1, rootMargin: "100px" }
+    )
+
+    observer.observe(sentinel)
+    return () => {
+      if (sentinel) observer.unobserve(sentinel)
+    }
+  }, [filteredData.length])
+
+  const getPageNumbers = () => {
+    const pages = []
+    const maxVisible = 5
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, '...', totalPages)
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages)
+      }
+    }
+    return pages
+  }
+
   return (
     <Card className="border-border/50 shadow-sm bg-card/50 backdrop-blur-md">
       <div className="p-6 flex flex-col md:flex-row gap-4 items-center justify-between border-b border-border/50">
@@ -247,15 +588,15 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[80px]">Foto</TableHead>
-                <TableHead className="w-[100px]">SKU</TableHead>
-                <TableHead>Nama Produk</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead className="text-right">HPP</TableHead>
-                <TableHead className="text-right">Harga Jual</TableHead>
-                <TableHead className="text-center">Stok</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                <TableHead className="w-[80px] px-4 font-bold uppercase text-[10px] tracking-wider text-muted-foreground align-middle">Foto</TableHead>
+                {renderSortableHeader('sku', 'SKU', 'w-[100px]')}
+                {renderSortableHeader('name', 'Nama Produk')}
+                {renderSortableHeader('category', 'Kategori')}
+                {renderSortableHeader('costPrice', 'HPP', undefined, 'right')}
+                {renderSortableHeader('price', 'Harga Jual', undefined, 'right')}
+                {renderSortableHeader('stock', 'Stok', undefined, 'center')}
+                {renderSortableHeader('status', 'Status')}
+                <TableHead className="text-right px-4 font-bold uppercase text-[10px] tracking-wider text-muted-foreground align-middle">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -266,7 +607,7 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredData.map((item) => (
+                paginatedDesktopData.map((item) => (
                   <TableRow key={item.id} className="transition-colors hover:bg-muted/40">
                     <TableCell>
                       <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden border border-border/50">
@@ -330,6 +671,89 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
               )}
             </TableBody>
           </Table>
+
+          {/* Pagination Desktop */}
+          {filteredData.length > 0 && (
+            <div className="flex items-center justify-between p-4 border-t border-border/50 bg-muted/5 text-xs">
+              <div className="flex items-center gap-4 text-muted-foreground">
+                <span>
+                  Menampilkan <strong>{Math.min(startIndex + 1, filteredData.length)}</strong> - <strong>{Math.min(startIndex + pageSize, filteredData.length)}</strong> dari <strong>{filteredData.length}</strong> produk
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span>Tampilkan:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value))
+                      setCurrentPage(1)
+                    }}
+                    className="h-7 rounded border border-border bg-background px-1.5 py-0.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer text-foreground"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(1)}
+                  className="h-7 w-7 rounded border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                >
+                  <ChevronsLeft className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  className="h-7 w-7 rounded border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {getPageNumbers().map((page, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      disabled={page === '...'}
+                      onClick={() => typeof page === 'number' && setCurrentPage(page)}
+                      className={`h-7 min-w-7 px-1.5 rounded text-xs font-semibold flex items-center justify-center transition-colors ${
+                        page === currentPage
+                          ? "bg-primary text-primary-foreground"
+                          : page === '...'
+                          ? "text-muted-foreground/60 cursor-default"
+                          : "border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  className="h-7 w-7 rounded border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="h-7 w-7 rounded border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                >
+                  <ChevronsRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* View Mobile: Cards */}
@@ -339,7 +763,7 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
               Tidak ada produk ditemukan.
             </div>
           ) : (
-            filteredData.map((item) => (
+            paginatedMobileData.map((item) => (
               <div key={item.id} className="bg-background/50 border border-border/50 rounded-2xl p-4 space-y-4 shadow-sm relative">
                 <div className="flex items-start gap-4">
                   <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center overflow-hidden border border-border/50 shrink-0">
@@ -415,6 +839,24 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
               </div>
             ))
           )}
+
+          {/* Infinite Scroll Sentinel for Mobile */}
+          {filteredData.length > 0 && (
+            <div className="space-y-2.5 mt-2">
+              <div className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 py-2 rounded-xl border border-border/30">
+                Menampilkan {Math.min(visibleMobileCount, filteredData.length)} dari {filteredData.length} produk
+              </div>
+              {visibleMobileCount < filteredData.length && (
+                <div 
+                  ref={mobileSentinelRef} 
+                  className="h-12 flex items-center justify-center text-muted-foreground text-xs font-semibold bg-primary/5 rounded-xl border border-primary/10"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin text-primary mr-2" />
+                  Memuat data lainnya...
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
 
@@ -425,85 +867,248 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
           setCompressedFile(null)
         }
       }}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Tambah Produk Baru</DialogTitle>
+        <DialogContent className="max-w-[440px] w-[calc(100%-1.5rem)] p-0 gap-0 overflow-hidden flex flex-col max-h-[90vh] rounded-2xl border-none shadow-xl bg-card">
+          <DialogHeader className="p-4 pb-3 border-b border-border/50 shrink-0">
+            <DialogTitle className="text-base font-semibold text-foreground">Tambah Produk Baru</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="sku">SKU / Kode Barang <span className="text-destructive">*</span></Label>
-              <Input id="sku" name="sku" placeholder="Misal: ITM-001" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="categoryId">Kategori Produk</Label>
-              <select 
-                id="categoryId" 
-                name="categoryId" 
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all cursor-pointer"
-              >
-                <option value="">Pilih Kategori...</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">Nama Produk <span className="text-destructive">*</span></Label>
-              <Input id="name" name="name" placeholder="Misal: Kopi Hitam Premium" required />
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="image" className="cursor-pointer">
-                  URL Foto Produk / Upload Foto
-                  <div className="mt-2 h-48 w-full border-2 border-dashed border-border/50 rounded-xl flex flex-col items-center justify-center bg-muted/20 hover:bg-muted/40 transition-all overflow-hidden relative group">
+          <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden">
+            {/* Scrollable form body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3.5 max-h-[calc(90vh-130px)] scrollbar-thin">
+              
+              {/* Row 1: Side-by-side Photo & SKU/Category info */}
+              <div className="flex gap-3 items-start">
+                {/* Photo Upload Card */}
+                <div className="space-y-1 shrink-0">
+                  <Label className="text-xs font-semibold text-muted-foreground/90">Foto</Label>
+                  <Label htmlFor="image" className="relative h-20 w-20 rounded-xl border border-dashed border-border/70 bg-muted/20 hover:bg-muted/40 transition-colors flex flex-col items-center justify-center cursor-pointer overflow-hidden group">
                     {previewUrl ? (
                       <img src={previewUrl} className="h-full w-full object-cover" />
                     ) : (
-                      <>
-                        <Plus className="h-6 w-6 text-muted-foreground mb-2 group-hover:scale-110 transition-transform" />
-                        <span className="text-[10px] text-muted-foreground font-medium">Klik untuk Pilih Gambar</span>
-                      </>
+                      <div className="flex flex-col items-center justify-center p-1 text-center">
+                        <Plus className="h-4 w-4 text-muted-foreground mb-0.5 group-hover:scale-110 transition-transform" />
+                        <span className="text-[9px] text-muted-foreground font-medium leading-none">Upload</span>
+                      </div>
                     )}
                     {isCompressing && (
-                      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-200">
-                        <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
-                        <span className="text-xs font-bold text-primary animate-pulse uppercase tracking-wider">Converting...</span>
+                      <div className="absolute inset-0 bg-background/80 backdrop-blur-xs flex items-center justify-center">
+                        <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                      </div>
+                    )}
+                  </Label>
+                  <Input 
+                    id="image" 
+                    name="image" 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleFileChange}
+                  />
+                </div>
+
+                {/* SKU & Category Fields */}
+                <div className="flex-1 grid grid-cols-1 gap-2.5">
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                    <Label htmlFor="sku" className="text-xs font-semibold text-muted-foreground/90">
+                      SKU / Kode Barang <span className="text-destructive">*</span>
+                    </Label>
+                    <button 
+                      type="button"
+                      onClick={() => setScanTarget('add')}
+                      className="h-6 px-2 rounded-lg bg-primary/15 hover:bg-primary/25 text-primary text-[10px] sm:text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all border border-primary/20 shrink-0"
+                    >
+                      <Scan className="h-3 w-3" /> Scan Barcode
+                    </button>
+                  </div>
+                    <Input 
+                      id="sku" 
+                      name="sku" 
+                      placeholder="Misal: ITM-001" 
+                      required 
+                      className="h-10 text-xs px-3 rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="categoryId" className="text-xs font-semibold text-muted-foreground/90">
+                      Kategori Produk
+                    </Label>
+                    <select 
+                      id="categoryId" 
+                      name="categoryId" 
+                      value={selectedCategoryId}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (val === "__new__") {
+                          setShowAddCategoryInput(true)
+                        } else {
+                          setSelectedCategoryId(val)
+                          setShowAddCategoryInput(false)
+                        }
+                      }}
+                      className="flex h-10 w-full rounded-xl border border-input bg-background/50 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all cursor-pointer"
+                    >
+                      <option value="">Pilih Kategori...</option>
+                      {localCategories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                      <option value="__new__" className="text-primary font-semibold text-xs">+ Tambah Kategori Baru...</option>
+                    </select>
+                    
+                    {showAddCategoryInput && (
+                      <div className="flex gap-2 items-center bg-primary/5 dark:bg-muted/30 p-2 rounded-xl border border-primary/10 dark:border-border/30 mt-1 animate-in slide-in-from-top-2 duration-200">
+                        <Input 
+                          placeholder="Nama kategori baru..."
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          className="h-8 text-xs px-2.5 bg-background flex-1"
+                        />
+                        <button
+                          type="button"
+                          disabled={isCreatingCategory}
+                          onClick={handleSaveCategory}
+                          className="h-8 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-semibold shrink-0 cursor-pointer disabled:opacity-50 flex items-center justify-center min-w-[60px]"
+                        >
+                          {isCreatingCategory ? <Loader2 className="h-3 w-3 animate-spin" /> : "Tambah"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAddCategoryInput(false)
+                            setSelectedCategoryId("")
+                            setNewCategoryName("")
+                          }}
+                          className="h-8 px-3 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground text-xs font-semibold shrink-0 cursor-pointer"
+                        >
+                          Batal
+                        </button>
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+
+              {/* Row 2: Product Name */}
+              <div className="space-y-1">
+                <Label htmlFor="name" className="text-xs font-semibold text-muted-foreground/90">
+                  Nama Produk <span className="text-destructive">*</span>
                 </Label>
                 <Input 
-                  id="image" 
-                  name="image" 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleFileChange}
+                  id="name" 
+                  name="name" 
+                  placeholder="Misal: Kopi Hitam Premium" 
+                  required 
+                  className="h-10 text-sm px-3 rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
+                />
+              </div>
+
+              {/* Row 3: Visual Pricing Box with Dynamic Calculations */}
+              <div className="p-3 bg-primary/5 dark:bg-muted/30 border border-primary/10 dark:border-border/30 rounded-xl space-y-2.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold text-primary dark:text-muted-foreground uppercase tracking-wider">Harga & Margin Keuntungan</span>
+                  {(() => {
+                    const priceNum = parseFloat(addPrice || "0")
+                    const costNum = parseFloat(addCostPrice || "0")
+                    if (priceNum > 0) {
+                      const profit = priceNum - costNum
+                      const marginPercent = Math.round((profit / priceNum) * 100)
+                      return (
+                        <span className={`text-[10px] px-2 py-0.5 font-bold rounded-md ${profit >= 0 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive"}`}>
+                          {profit >= 0 
+                            ? `Margin: ${marginPercent}% (+Rp ${profit.toLocaleString("id-ID")})` 
+                            : `Rugi: Rp ${Math.abs(profit).toLocaleString("id-ID")}`
+                          }
+                        </span>
+                      )
+                    }
+                    return <span className="text-[10px] text-muted-foreground/60 italic font-medium">Masukkan harga jual</span>
+                  })()}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="costPrice" className="text-xs font-semibold text-muted-foreground/80">
+                      Harga Beli / HPP
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground/60 select-none">Rp</span>
+                      <Input 
+                        id="costPrice" 
+                        name="costPrice" 
+                        type="number" 
+                        placeholder="15000" 
+                        min="0" 
+                        value={addCostPrice}
+                        onChange={(e) => setAddCostPrice(e.target.value)}
+                        style={{ paddingLeft: "2.2rem" }}
+                        className="h-10 text-xs rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="price" className="text-xs font-semibold text-muted-foreground/80">
+                      Harga Jual <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground/60 select-none">Rp</span>
+                      <Input 
+                        id="price" 
+                        name="price" 
+                        type="number" 
+                        placeholder="25000" 
+                        min="0" 
+                        required 
+                        value={addPrice}
+                        onChange={(e) => setAddPrice(e.target.value)}
+                        style={{ paddingLeft: "2.2rem" }}
+                        className="h-10 text-xs rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 4: Stock Input */}
+              <div className="space-y-1">
+                <Label htmlFor="stock" className="text-xs font-semibold text-muted-foreground/90">
+                  Stok Awal Fisik <span className="text-destructive">*</span>
+                </Label>
+                <Input 
+                  id="stock" 
+                  name="stock" 
+                  type="number" 
+                  placeholder="50" 
+                  min="0" 
+                  required 
+                  className="h-10 text-sm px-3 rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="costPrice">Harga Beli / HPP (Rp)</Label>
-                <Input id="costPrice" name="costPrice" type="number" placeholder="15000" min="0" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="price">Harga Jual (Rp) <span className="text-destructive">*</span></Label>
-                <Input id="price" name="price" type="number" placeholder="25000" min="0" required />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stock">Stok Awal Fisik <span className="text-destructive">*</span></Label>
-              <Input id="stock" name="stock" type="number" placeholder="50" min="0" required />
-            </div>
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="ghost" onClick={() => setIsAddOpen(false)}>
+
+            {/* Sticky dialog footer */}
+            <div className="p-3 bg-muted/30 border-t border-border/50 flex flex-col gap-2 shrink-0 sm:flex-row-reverse sm:gap-2">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || isCompressing}
+                className="w-full sm:w-auto h-11 text-sm font-semibold rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/95 transition-colors shadow-sm"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  isCompressing ? "Converting..." : "Simpan Produk"
+                )}
+              </Button>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={() => setIsAddOpen(false)}
+                className="w-full sm:w-auto h-11 text-sm font-medium rounded-xl hover:bg-muted"
+              >
                 Batal
               </Button>
-              <Button type="submit" disabled={isSubmitting || isCompressing}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isCompressing ? "Converting..." : "Simpan Produk")}
-              </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -515,87 +1120,359 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
           setCompressedFile(null)
         }
       }}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Edit Produk</DialogTitle>
+        <DialogContent className="max-w-[440px] w-[calc(100%-1.5rem)] p-0 gap-0 overflow-hidden flex flex-col max-h-[90vh] rounded-2xl border-none shadow-xl bg-card">
+          <DialogHeader className="p-4 pb-3 border-b border-border/50 shrink-0">
+            <DialogTitle className="text-base font-semibold text-foreground">Edit Produk</DialogTitle>
           </DialogHeader>
           {editingProduct && (
-            <form onSubmit={handleEditSubmit} className="space-y-4 pt-4">
+            <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 overflow-hidden">
               <input type="hidden" name="id" value={editingProduct.id} />
-              <div className="space-y-2">
-                <Label htmlFor="edit-sku">SKU / Kode Barang <span className="text-destructive">*</span></Label>
-                <Input id="edit-sku" name="sku" defaultValue={editingProduct.sku} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-categoryId">Kategori Produk</Label>
-                <select 
-                  id="edit-categoryId" 
-                  name="categoryId" 
-                  defaultValue={editingProduct.categoryId}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all cursor-pointer"
-                >
-                  <option value="">Pilih Kategori...</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Nama Produk <span className="text-destructive">*</span></Label>
-                <Input id="edit-name" name="name" defaultValue={editingProduct.name} required />
-              </div>
-              <div className="space-y-4 py-2">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-image" className="cursor-pointer">
-                    Ganti Foto Produk
-                    <div className="mt-2 h-48 w-full border-2 border-dashed border-border/50 rounded-xl flex flex-col items-center justify-center bg-muted/20 hover:bg-muted/40 transition-all overflow-hidden relative">
+              
+              {/* Scrollable form body */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3.5 max-h-[calc(90vh-130px)] scrollbar-thin">
+                
+                {/* Row 1: Side-by-side Photo & SKU/Category info */}
+                <div className="flex gap-3 items-start">
+                  {/* Photo Upload Card */}
+                  <div className="space-y-1 shrink-0">
+                    <Label className="text-xs font-semibold text-muted-foreground/90">Foto</Label>
+                    <Label htmlFor="edit-image" className="relative h-20 w-20 rounded-xl border border-dashed border-border/70 bg-muted/20 hover:bg-muted/40 transition-colors flex flex-col items-center justify-center cursor-pointer overflow-hidden group">
                       {previewUrl || editingProduct.image ? (
                         <img src={previewUrl || editingProduct.image || ""} className="h-full w-full object-cover" />
                       ) : (
-                        <Plus className="h-6 w-6 text-muted-foreground" />
+                        <div className="flex flex-col items-center justify-center p-1 text-center">
+                          <Plus className="h-4 w-4 text-muted-foreground mb-0.5 group-hover:scale-110 transition-transform" />
+                          <span className="text-[9px] text-muted-foreground font-medium leading-none">Upload</span>
+                        </div>
                       )}
                       {isCompressing && (
-                        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-200">
-                          <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
-                          <span className="text-xs font-bold text-primary animate-pulse uppercase tracking-wider">Converting...</span>
+                        <div className="absolute inset-0 bg-background/80 backdrop-blur-xs flex items-center justify-center">
+                          <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                        </div>
+                      )}
+                    </Label>
+                    <Input 
+                      id="edit-image" 
+                      name="image" 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleFileChange}
+                    />
+                  </div>
+
+                  {/* SKU & Category Fields */}
+                  <div className="flex-1 grid grid-cols-1 gap-2.5">
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                      <Label htmlFor="edit-sku" className="text-xs font-semibold text-muted-foreground/90">
+                        SKU / Kode Barang <span className="text-destructive">*</span>
+                      </Label>
+                      <button 
+                        type="button"
+                        onClick={() => setScanTarget('edit')}
+                        className="h-6 px-2 rounded-lg bg-primary/15 hover:bg-primary/25 text-primary text-[10px] sm:text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all border border-primary/20 shrink-0"
+                      >
+                        <Scan className="h-3 w-3" /> Scan Barcode
+                      </button>
+                    </div>
+                      <Input 
+                        id="edit-sku" 
+                        name="sku" 
+                        defaultValue={editingProduct.sku} 
+                        required 
+                        className="h-10 text-xs px-3 rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-categoryId" className="text-xs font-semibold text-muted-foreground/90">
+                        Kategori Produk
+                      </Label>
+                      <select 
+                        id="edit-categoryId" 
+                        name="categoryId" 
+                        value={editSelectedCategoryId}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          if (val === "__new__") {
+                            setShowEditCategoryInput(true)
+                          } else {
+                            setEditSelectedCategoryId(val)
+                            setShowEditCategoryInput(false)
+                          }
+                        }}
+                        className="flex h-10 w-full rounded-xl border border-input bg-background/50 px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all cursor-pointer"
+                      >
+                        <option value="">Pilih Kategori...</option>
+                        {localCategories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                        <option value="__new__" className="text-primary font-semibold text-xs">+ Tambah Kategori Baru...</option>
+                      </select>
+                      
+                      {showEditCategoryInput && (
+                        <div className="flex gap-2 items-center bg-primary/5 dark:bg-muted/30 p-2 rounded-xl border border-primary/10 dark:border-border/30 mt-1 animate-in slide-in-from-top-2 duration-200">
+                          <Input 
+                            placeholder="Nama kategori baru..."
+                            value={editNewCategoryName}
+                            onChange={(e) => setNewEditCategoryName(e.target.value)}
+                            className="h-8 text-xs px-2.5 bg-background flex-1"
+                          />
+                          <button
+                            type="button"
+                            disabled={isCreatingCategory}
+                            onClick={handleSaveEditCategory}
+                            className="h-8 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-semibold shrink-0 cursor-pointer disabled:opacity-50 flex items-center justify-center min-w-[60px]"
+                          >
+                            {isCreatingCategory ? <Loader2 className="h-3 w-3 animate-spin" /> : "Tambah"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowEditCategoryInput(false)
+                              setEditSelectedCategoryId(editingProduct.categoryId || "")
+                              setNewEditCategoryName("")
+                            }}
+                            className="h-8 px-3 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground text-xs font-semibold shrink-0 cursor-pointer"
+                          >
+                            Batal
+                          </button>
                         </div>
                       )}
                     </div>
+                  </div>
+                </div>
+
+                {/* Row 2: Product Name */}
+                <div className="space-y-1">
+                  <Label htmlFor="edit-name" className="text-xs font-semibold text-muted-foreground/90">
+                    Nama Produk <span className="text-destructive">*</span>
                   </Label>
                   <Input 
-                    id="edit-image" 
-                    name="image" 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    onChange={handleFileChange}
+                    id="edit-name" 
+                    name="name" 
+                    defaultValue={editingProduct.name} 
+                    required 
+                    className="h-10 text-sm px-3 rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-costPrice">Harga Beli / HPP (Rp)</Label>
-                  <Input id="edit-costPrice" name="costPrice" type="number" defaultValue={editingProduct.costPrice} min="0" />
+
+                {/* Row 3: Visual Pricing Box with Dynamic Calculations */}
+                <div className="p-3 bg-primary/5 dark:bg-muted/30 border border-primary/10 dark:border-border/30 rounded-xl space-y-2.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold text-primary dark:text-muted-foreground uppercase tracking-wider">Harga & Margin Keuntungan</span>
+                    {(() => {
+                      const priceNum = parseFloat(editPrice || "0")
+                      const costNum = parseFloat(editCostPrice || "0")
+                      if (priceNum > 0) {
+                        const profit = priceNum - costNum
+                        const marginPercent = Math.round((profit / priceNum) * 100)
+                        return (
+                          <span className={`text-[10px] px-2 py-0.5 font-bold rounded-md ${profit >= 0 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive"}`}>
+                            {profit >= 0 
+                              ? `Margin: ${marginPercent}% (+Rp ${profit.toLocaleString("id-ID")})` 
+                              : `Rugi: Rp ${Math.abs(profit).toLocaleString("id-ID")}`
+                            }
+                          </span>
+                        )
+                      }
+                      return <span className="text-[10px] text-muted-foreground/60 italic font-medium">Masukkan harga jual</span>
+                    })()}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-costPrice" className="text-xs font-semibold text-muted-foreground/80">
+                        Harga Beli / HPP
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground/60 select-none">Rp</span>
+                        <Input 
+                          id="edit-costPrice" 
+                          name="costPrice" 
+                          type="number" 
+                          value={editCostPrice}
+                          onChange={(e) => setEditCostPrice(e.target.value)}
+                          style={{ paddingLeft: "2.2rem" }}
+                          className="h-10 text-xs rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-price" className="text-xs font-semibold text-muted-foreground/80">
+                        Harga Jual <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground/60 select-none">Rp</span>
+                        <Input 
+                          id="edit-price" 
+                          name="price" 
+                          type="number" 
+                          required 
+                          value={editPrice}
+                          onChange={(e) => setEditPrice(e.target.value)}
+                          style={{ paddingLeft: "2.2rem" }}
+                          className="h-10 text-xs rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-price">Harga Jual (Rp) <span className="text-destructive">*</span></Label>
-                  <Input id="edit-price" name="price" type="number" defaultValue={editingProduct.price} min="0" required />
+
+                {/* Row 4: Stock (Read-only by default, editable via helper action) */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="edit-stock" className="text-xs font-semibold text-muted-foreground/90">
+                      Stok Saat Ini
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowAdjustStockForm(!showAdjustStockForm)}
+                      className="h-6 px-2 rounded-lg bg-primary/15 hover:bg-primary/25 text-primary text-[10px] sm:text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all border border-primary/20 shrink-0"
+                    >
+                      Ubah Stok
+                    </button>
+                  </div>
+                  <Input 
+                    id="edit-stock" 
+                    type="number" 
+                    value={editingProduct.stock} 
+                    disabled 
+                    className="h-10 text-sm px-3 rounded-xl border border-input bg-background/50 opacity-60 cursor-not-allowed"
+                  />
+                  
+                  {showAdjustStockForm && (
+                    <div className="bg-primary/5 dark:bg-muted/30 p-2.5 rounded-xl border border-primary/10 dark:border-border/30 mt-1.5 animate-in slide-in-from-top-2 duration-200 space-y-2.5">
+                      <span className="text-[10px] font-bold text-primary dark:text-muted-foreground uppercase tracking-wider block">Form Penyesuaian Stok</span>
+                      
+                      <div className="flex gap-2">
+                        <select
+                          value={adjType}
+                          onChange={(e) => {
+                            setAdjType(e.target.value as 'in' | 'out' | 'set')
+                            setAdjQty("")
+                          }}
+                          className="h-8 rounded-lg border border-input bg-background px-2 text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          <option value="in">Tambah (+)</option>
+                          <option value="out">Kurang (-)</option>
+                          <option value="set">Ubah Jadi (=)</option>
+                        </select>
+                        <Input
+                          type="number"
+                          placeholder={adjType === 'set' ? "Stok akhir..." : "Jumlah..."}
+                          value={adjQty}
+                          onChange={(e) => setAdjQty(e.target.value)}
+                          className="h-8 text-xs px-2.5 bg-background flex-1"
+                        />
+                      </div>
+                      
+                      <Input
+                        placeholder="Catatan (opsional)..."
+                        value={adjNotes}
+                        onChange={(e) => setAdjNotes(e.target.value)}
+                        className="h-8 text-xs px-2.5 bg-background w-full"
+                      />
+                      
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          disabled={isAdjustingStock}
+                          onClick={handleSaveStockAdjustment}
+                          className="h-7 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/95 text-[10px] font-bold shrink-0 cursor-pointer disabled:opacity-50 flex items-center justify-center min-w-[50px]"
+                        >
+                          {isAdjustingStock ? <Loader2 className="h-3 w-3 animate-spin" /> : "Simpan"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAdjustStockForm(false)
+                            setAdjQty("")
+                            setAdjNotes("")
+                          }}
+                          className="h-7 px-3 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground text-[10px] font-bold shrink-0 cursor-pointer"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-stock">Stok (Ubah via Inventori)</Label>
-                <Input id="edit-stock" type="number" value={editingProduct.stock} disabled />
-              </div>
-              <DialogFooter className="mt-6">
-                <Button type="button" variant="ghost" onClick={() => setEditingProduct(null)}>
+
+              {/* Sticky dialog footer */}
+              <div className="p-3 bg-muted/30 border-t border-border/50 flex flex-col gap-2 shrink-0 sm:flex-row-reverse sm:gap-2">
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting || isCompressing}
+                  className="w-full sm:w-auto h-11 text-sm font-semibold rounded-xl px-5 bg-primary text-primary-foreground hover:bg-primary/95 transition-colors shadow-sm"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    isCompressing ? "Converting..." : "Simpan Perubahan"
+                  )}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => setEditingProduct(null)}
+                  className="w-full sm:w-auto h-11 text-sm font-medium rounded-xl hover:bg-muted"
+                >
                   Batal
                 </Button>
-              <Button type="submit" disabled={isSubmitting || isCompressing}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isCompressing ? "Converting..." : "Simpan Perubahan")}
-              </Button>
-              </DialogFooter>
+              </div>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Scanner Dialog */}
+      <Dialog open={!!scanTarget} onOpenChange={(open) => { if (!open) setScanTarget(null); }}>
+        <DialogContent showCloseButton={false} className="max-w-[360px] w-[calc(100%-2rem)] p-0 overflow-hidden rounded-2xl bg-zinc-950 border border-white/10 text-white shadow-2xl">
+          <DialogHeader className="p-4 pb-3 shrink-0 border-b border-white/10 flex flex-row items-center justify-between">
+            <DialogTitle className="text-sm font-semibold text-white">Scan Barcode / QR Code</DialogTitle>
+            <button 
+              type="button" 
+              onClick={() => setScanTarget(null)}
+              className="text-white/60 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </DialogHeader>
+          <div className="relative aspect-square w-full bg-black flex items-center justify-center overflow-hidden">
+            {/* Viewport for html5-qrcode video */}
+            <div id="barcode-scanner-viewport" className="absolute inset-0 w-full h-full object-cover [&_video]:object-cover [&_video]:w-full [&_video]:h-full" />
+            
+            {/* High-visibility viewport overlays (pure css scanner outline) */}
+            <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-8">
+              <div className="w-full flex-1 border border-dashed border-white/30 rounded-xl relative flex items-center justify-center bg-black/10">
+                {/* Scanner target glowing laser line */}
+                <div className="absolute left-4 right-4 h-[2px] bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.9)] animate-pulse" />
+                
+                {/* Thick neon-primary corner brackets */}
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-md" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-md" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-md" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-md" />
+              </div>
+            </div>
+            
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-xs px-4 py-1.5 rounded-full border border-white/10 text-white shadow-md select-none">
+              <p className="text-[11px] font-semibold tracking-wide whitespace-nowrap">Posisikan barcode di tengah kotak</p>
+            </div>
+          </div>
+          <div className="p-4 bg-zinc-950 flex justify-center border-t border-white/10 shrink-0">
+            <button 
+              type="button" 
+              className="w-full py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold tracking-wide transition-colors border border-white/10 active:scale-98 cursor-pointer"
+              onClick={() => setScanTarget(null)}
+            >
+              Batal
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </Card>

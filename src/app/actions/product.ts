@@ -250,3 +250,179 @@ export async function searchProducts(query: string) {
     return []
   }
 }
+
+export async function getCheckoutProducts(options: {
+  page?: number
+  limit?: number
+  search?: string
+  categoryId?: string | null
+}) {
+  try {
+    const page = options.page || 1
+    const limit = options.limit || 20
+    const search = options.search || ""
+    const categoryId = options.categoryId || null
+
+    const skip = (page - 1) * limit
+
+    const whereClause: any = {
+      stock: {
+        gt: 0
+      }
+    }
+
+    if (categoryId) {
+      whereClause.categoryId = categoryId
+    }
+
+    if (search.trim() !== "") {
+      const q = search.trim()
+      whereClause.OR = [
+        { name: { contains: q } },
+        { sku: { contains: q } },
+        { barcode: { contains: q } }
+      ]
+    }
+
+    const products = await prisma.product.findMany({
+      where: whereClause,
+      include: {
+        category: true
+      },
+      orderBy: {
+        name: "asc"
+      },
+      skip,
+      take: limit + 1
+    })
+
+    const hasMore = products.length > limit
+    const pageProducts = products.slice(0, limit).map(p => ({
+      ...p,
+      price: Number(p.price),
+      costPrice: p.costPrice ? Number(p.costPrice) : null,
+    }))
+
+    return {
+      success: true,
+      products: pageProducts,
+      hasMore
+    }
+  } catch (error) {
+    console.error("Gagal mengambil produk checkout:", error)
+    return {
+      success: false,
+      products: [],
+      hasMore: false,
+      error: "Gagal memuat produk"
+    }
+  }
+}
+
+export async function createCategory(name: string) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user || (session.user.role !== "ADMIN" && session.user.role !== "MANAGER")) {
+      return { success: false, error: "Akses Ditolak" }
+    }
+
+    if (!name || name.trim() === "") {
+      return { success: false, error: "Nama kategori tidak boleh kosong" }
+    }
+
+    const trimmedName = name.trim()
+
+    // Check existing
+    const existing = await prisma.category.findUnique({
+      where: { name: trimmedName }
+    })
+
+    if (existing) {
+      return { success: true, category: existing }
+    }
+
+    const category = await prisma.category.create({
+      data: {
+        name: trimmedName,
+      }
+    })
+
+    revalidatePath("/dashboard/products")
+    return { success: true, category }
+  } catch (error) {
+    console.error("Gagal menambah kategori:", error)
+    return { success: false, error: "Terjadi kesalahan internal server." }
+  }
+}
+
+export async function adjustProductStock(formData: FormData) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user || (session.user.role !== "ADMIN" && session.user.role !== "MANAGER")) {
+      return { success: false, error: "Akses Ditolak" }
+    }
+
+    const productId = formData.get("productId") as string
+    const type = formData.get("type") as string // "in" | "out" | "set"
+    const value = parseInt(formData.get("value") as string)
+    const notes = formData.get("notes") as string || "Penyesuaian stok manual"
+
+    if (!productId || !type || isNaN(value)) {
+      return { success: false, error: "Data penyesuaian stok tidak valid." }
+    }
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId }
+    })
+
+    if (!product) {
+      return { success: false, error: "Produk tidak ditemukan." }
+    }
+
+    let delta = 0
+    if (type === "in") {
+      delta = value
+    } else if (type === "out") {
+      delta = -value
+    } else if (type === "set") {
+      delta = value - product.stock
+    } else {
+      return { success: false, error: "Tipe penyesuaian tidak dikenal." }
+    }
+
+    const newStock = product.stock + delta
+    if (newStock < 0) {
+      return { success: false, error: "Transaksi dibatalkan. Stok akhir tidak boleh kurang dari 0." }
+    }
+
+    if (delta !== 0) {
+      await prisma.$transaction(async (tx) => {
+        await tx.product.update({
+          where: { id: productId },
+          data: {
+            stock: newStock
+          }
+        })
+
+        await tx.inventoryTransaction.create({
+          data: {
+            productId,
+            type: "ADJUSTMENT",
+            quantity: delta,
+            notes,
+            userId: session.user.id
+          }
+        })
+      })
+    }
+
+    revalidatePath("/dashboard/products")
+    revalidatePath("/dashboard/inventory")
+    return { success: true, newStock }
+  } catch (error) {
+    console.error("Gagal menyesuaikan stok:", error)
+    return { success: false, error: "Terjadi kesalahan internal server." }
+  }
+}
+
+
