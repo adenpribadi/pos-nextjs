@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { Product, Category } from "@prisma/client"
 import { useCart } from "@/hooks/useCart"
 import { Input } from "@/components/ui/input"
-import { Search, LayoutGrid, Filter, X, Scan } from "lucide-react"
+import { Search, LayoutGrid, Filter, X, Scan, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Sheet,
@@ -19,10 +19,18 @@ import { Html5Qrcode } from "html5-qrcode"
 import { toast } from "sonner"
 import { getCheckoutProducts } from "@/app/actions/product"
 
+type ProductVariant = {
+  id: string
+  name: string
+  price: number
+  sortOrder: number
+}
+
 type ProductWithCategory = Omit<Product, "price" | "costPrice"> & {
   price: number
   costPrice: number | null
   category: Category | null
+  variants: ProductVariant[]
 }
 
 interface ProductGridProps {
@@ -50,6 +58,9 @@ export function ProductGrid({
 
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isScanOpen, setIsScanOpen] = useState(false)
+
+  // Variant picker state
+  const [variantPickerProduct, setVariantPickerProduct] = useState<ProductWithCategory | null>(null)
 
   // Scanner debounce refs to prevent frame double scans
   const lastScannedBarcodeRef = useRef<string>("")
@@ -213,10 +224,11 @@ export function ProductGrid({
               
               if (matchedProduct) {
                 // Check current cart items
-                const cartItem = itemsRef.current.find(item => item.productId === matchedProduct!.id)
+                const cartItemId = `${matchedProduct!.id}::default`
+                const cartItem = itemsRef.current.find(item => item.id === cartItemId)
                 if (cartItem) {
                   if (cartItem.quantity < matchedProduct!.stock) {
-                    updateQuantityRef.current(matchedProduct!.id, cartItem.quantity + 1)
+                    updateQuantityRef.current(cartItemId, cartItem.quantity + 1)
                     playBeep("success")
                     toast.success(`Ditambah: ${matchedProduct!.name} (Qty: ${cartItem.quantity + 1})`)
                   } else {
@@ -241,10 +253,11 @@ export function ProductGrid({
                   if (res.success && res.products.length > 0) {
                     toast.dismiss("barcode-lookup")
                     const dbProduct = res.products[0]
-                    const cartItem = itemsRef.current.find(item => item.productId === dbProduct.id)
+                    const cartItemId = `${dbProduct.id}::default`
+                    const cartItem = itemsRef.current.find(item => item.id === cartItemId)
                     if (cartItem) {
                       if (cartItem.quantity < dbProduct.stock) {
-                        updateQuantityRef.current(dbProduct.id, cartItem.quantity + 1)
+                        updateQuantityRef.current(cartItemId, cartItem.quantity + 1)
                         playBeep("success")
                         toast.success(`Ditambah: ${dbProduct.name} (Qty: ${cartItem.quantity + 1})`)
                       } else {
@@ -467,13 +480,19 @@ export function ProductGrid({
             <button
               key={product.id}
               onClick={() => {
-                addItem({
-                  productId: product.id,
-                  name: product.name,
-                  price: Number(product.price),
-                  stock: product.stock,
-                  image: product.image,
-                })
+                if (product.variants && product.variants.length > 0) {
+                  // Produk dengan varian → tampilkan picker dialog
+                  setVariantPickerProduct(product)
+                } else {
+                  // Produk tanpa varian → langsung masuk keranjang
+                  addItem({
+                    productId: product.id,
+                    name: product.name,
+                    price: Number(product.price),
+                    stock: product.stock,
+                    image: product.image,
+                  })
+                }
               }}
               className="group relative flex flex-col bg-card rounded-2xl border border-border/50 p-4 text-left shadow-sm hover:shadow-xl hover:border-primary/50 transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary overflow-hidden"
             >
@@ -571,6 +590,115 @@ export function ProductGrid({
               Selesai
             </button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Variant Picker Dialog ── */}
+      <Dialog
+        open={!!variantPickerProduct}
+        onOpenChange={(open) => !open && setVariantPickerProduct(null)}
+      >
+        <DialogContent className="sm:max-w-sm p-0 rounded-2xl overflow-hidden">
+          {variantPickerProduct && (
+            <>
+              {/* Header with product info */}
+              <div className="flex items-center gap-3 p-5 border-b border-border/40 bg-gradient-to-r from-primary/5 to-transparent">
+                {/* Thumbnail */}
+                <div className="w-14 h-14 rounded-xl bg-muted/40 overflow-hidden shrink-0 flex items-center justify-center">
+                  {variantPickerProduct.image ? (
+                    <img
+                      src={variantPickerProduct.image}
+                      alt={variantPickerProduct.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xl font-black text-muted-foreground/40 uppercase">
+                      {variantPickerProduct.name.slice(0, 2)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <DialogTitle className="font-black text-base leading-tight truncate">
+                    {variantPickerProduct.name}
+                  </DialogTitle>
+                  {variantPickerProduct.category && (
+                    <span
+                      className="text-[10px] font-bold tracking-wider uppercase"
+                      style={{ color: variantPickerProduct.category.color || undefined }}
+                    >
+                      {variantPickerProduct.category.name}
+                    </span>
+                  )}
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Stok: {variantPickerProduct.stock}</p>
+                </div>
+              </div>
+
+              {/* Variant options */}
+              <div className="p-4 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">
+                  Pilih cara penjualan:
+                </p>
+
+                {/* Variant rows */}
+                {variantPickerProduct.variants.map((variant) => (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    onClick={() => {
+                      addItem({
+                        productId: variantPickerProduct.id,
+                        variantId: variant.id,
+                        variantName: variant.name,
+                        name: variantPickerProduct.name,
+                        price: variant.price,
+                        stock: variantPickerProduct.stock,
+                        image: variantPickerProduct.image,
+                      })
+                      setVariantPickerProduct(null)
+                    }}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-border/50 bg-background hover:border-primary/60 hover:bg-primary/5 transition-all active:scale-[0.98] group"
+                  >
+                    <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                      {variant.name}
+                    </span>
+                    <span className="font-black text-base font-mono text-primary">
+                      Rp {variant.price.toLocaleString('id-ID')}
+                    </span>
+                  </button>
+                ))}
+
+                {/* Separator */}
+                <div className="flex items-center gap-2 py-1">
+                  <div className="flex-1 border-t border-border/40" />
+                  <span className="text-[10px] text-muted-foreground font-medium">atau</span>
+                  <div className="flex-1 border-t border-border/40" />
+                </div>
+
+                {/* Harga normal (tanpa varian) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    addItem({
+                      productId: variantPickerProduct.id,
+                      name: variantPickerProduct.name,
+                      price: variantPickerProduct.price,
+                      stock: variantPickerProduct.stock,
+                      image: variantPickerProduct.image,
+                    })
+                    setVariantPickerProduct(null)
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-dashed border-border/60 bg-muted/20 hover:border-muted-foreground/40 hover:bg-muted/40 transition-all active:scale-[0.98] group"
+                >
+                  <span className="font-medium text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                    Harga Normal
+                  </span>
+                  <span className="font-black text-base font-mono text-muted-foreground group-hover:text-foreground transition-colors">
+                    Rp {variantPickerProduct.price.toLocaleString('id-ID')}
+                  </span>
+                </button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

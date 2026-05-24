@@ -8,6 +8,9 @@ export default async function ProductsPage() {
     include: {
       category: true,
       updatedBy: true,
+      variants: {
+        orderBy: { sortOrder: "asc" }
+      },
     },
     orderBy: {
       createdAt: "desc"
@@ -39,6 +42,12 @@ export default async function ProductsPage() {
       email: product.updatedBy.email,
       role: product.updatedBy.role,
     } : null,
+    variants: product.variants.map(v => ({
+      id: v.id,
+      name: v.name,
+      price: Number(v.price),
+      sortOrder: v.sortOrder,
+    })),
   }))
 
   return (

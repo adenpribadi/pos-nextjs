@@ -135,6 +135,7 @@ model Product {
   categoryId    String?
   category      Category? @relation(fields: [categoryId], references: [id])
   
+  variants      ProductVariant[]
   saleItems     SaleItem[]
   inventoryLogs InventoryTransaction[]
   supplyShipments SupplyShipment[]
@@ -144,6 +145,21 @@ model Product {
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+// Varian harga untuk produk (contoh: Mie Instan → Mentah / Dimasak)
+model ProductVariant {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String   // Contoh: "Dimasak", "Mentah", "Dengan Es"
+  price     Decimal  @db.Decimal(10, 2)
+  sortOrder Int      @default(0)
+
+  saleItems SaleItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum RequestStatus {
@@ -214,6 +230,11 @@ model SaleItem {
   
   productId String
   product   Product @relation(fields: [productId], references: [id])
+
+  // Varian yang dipilih (opsional — null jika dijual dengan harga normal)
+  variantId   String?
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+  variantName String?         // Snapshot nama varian saat transaksi
   
   quantity  Int
   price     Decimal @db.Decimal(10, 2)

@@ -12,6 +12,7 @@ type ProductWithCategory = Omit<Product, "price" | "costPrice"> & {
   price: number
   costPrice: number | null
   category: Category | null
+  variants: { id: string; name: string; price: number; sortOrder: number }[]
 }
 
 interface POSClientLayoutProps {

@@ -22,6 +22,17 @@ export async function createProduct(formData: FormData) {
     const costPrice = formData.get("costPrice") ? parseFloat(formData.get("costPrice") as string) : null
     const stock = parseInt(formData.get("stock") as string)
     const categoryId = formData.get("categoryId") as string || null
+    const variantsRaw = formData.get("variants") as string | null
+    
+    // Parse varian jika ada
+    let variants: { name: string; price: number; sortOrder: number }[] = []
+    if (variantsRaw) {
+      try {
+        variants = JSON.parse(variantsRaw)
+      } catch {
+        // Abaikan jika JSON tidak valid
+      }
+    }
     
     // Proses File Upload
     const imageFile = formData.get("image") as File | null
@@ -88,6 +99,18 @@ export async function createProduct(formData: FormData) {
         }
       })
 
+      // Buat varian jika ada
+      if (variants.length > 0) {
+        await tx.productVariant.createMany({
+          data: variants.map((v, i) => ({
+            productId: product.id,
+            name: v.name,
+            price: v.price,
+            sortOrder: v.sortOrder ?? i,
+          }))
+        })
+      }
+
       // Jika ada stok awal > 0, catat sebagai transaksi inventori
       if (stock > 0) {
         await tx.inventoryTransaction.create({
@@ -126,6 +149,17 @@ export async function updateProduct(formData: FormData) {
     const price = parseFloat(formData.get("price") as string)
     const costPrice = formData.get("costPrice") ? parseFloat(formData.get("costPrice") as string) : null
     const categoryId = formData.get("categoryId") as string || null
+    const variantsRaw = formData.get("variants") as string | null
+
+    // Parse varian yang dikirim dari form
+    let incomingVariants: { id?: string; name: string; price: number; sortOrder: number }[] = []
+    if (variantsRaw) {
+      try {
+        incomingVariants = JSON.parse(variantsRaw)
+      } catch {
+        // Abaikan jika JSON tidak valid
+      }
+    }
 
     // Proses File Upload (Sama dengan create)
     const imageFile = formData.get("image") as File | null
@@ -179,16 +213,46 @@ export async function updateProduct(formData: FormData) {
       return { success: false, error: "SKU / Kode Barang ini sudah terpakai." }
     }
 
-    await prisma.product.update({
-      where: { id },
-      data: {
-        name,
-        sku,
-        price,
-        costPrice,
-        ...(imagePath !== undefined && { image: imagePath }),
-        categoryId: categoryId === "" ? null : categoryId,
-        updatedById: session.user.id,
+    await prisma.$transaction(async (tx) => {
+      await tx.product.update({
+        where: { id },
+        data: {
+          name,
+          sku,
+          price,
+          costPrice,
+          ...(imagePath !== undefined && { image: imagePath }),
+          categoryId: categoryId === "" ? null : categoryId,
+          updatedById: session.user.id,
+        }
+      })
+
+      // Sinkronisasi varian:
+      // 1. Ambil varian yang ada saat ini
+      const existingVariants = await tx.productVariant.findMany({ where: { productId: id } })
+      const existingIds = new Set(existingVariants.map(v => v.id))
+      const incomingIds = new Set(incomingVariants.filter(v => v.id).map(v => v.id!))
+
+      // 2. Hapus varian yang tidak ada di incoming
+      const toDelete = [...existingIds].filter(vid => !incomingIds.has(vid))
+      if (toDelete.length > 0) {
+        await tx.productVariant.deleteMany({ where: { id: { in: toDelete } } })
+      }
+
+      // 3. Update atau buat varian
+      for (const [i, v] of incomingVariants.entries()) {
+        if (v.id && existingIds.has(v.id)) {
+          // Update existing
+          await tx.productVariant.update({
+            where: { id: v.id },
+            data: { name: v.name, price: v.price, sortOrder: v.sortOrder ?? i }
+          })
+        } else {
+          // Create new
+          await tx.productVariant.create({
+            data: { productId: id, name: v.name, price: v.price, sortOrder: v.sortOrder ?? i }
+          })
+        }
       }
     })
 
@@ -289,7 +353,10 @@ export async function getCheckoutProducts(options: {
     const products = await prisma.product.findMany({
       where: whereClause,
       include: {
-        category: true
+        category: true,
+        variants: {
+          orderBy: { sortOrder: "asc" }
+        },
       },
       orderBy: {
         name: "asc"
@@ -303,6 +370,7 @@ export async function getCheckoutProducts(options: {
       ...p,
       price: Number(p.price),
       costPrice: p.costPrice ? Number(p.costPrice) : null,
+      variants: p.variants.map(v => ({ ...v, price: Number(v.price) }))
     }))
 
     return {

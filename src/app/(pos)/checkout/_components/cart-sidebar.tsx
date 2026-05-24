@@ -337,6 +337,11 @@ export function CartSidebar() {
                   <div key={item.id} className="flex gap-2 p-2.5 bg-muted/20 border border-border/40 rounded-xl group">
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-xs leading-tight truncate">{item.name}</p>
+                      {item.variantName && (
+                        <p className="text-[10px] text-muted-foreground/80 font-medium mt-0.5">
+                          — {item.variantName}
+                        </p>
+                      )}
                       <p className="text-[10px] text-primary font-black font-mono mt-0.5">
                         Rp {item.price.toLocaleString("id-ID")}
                       </p>
@@ -345,7 +350,7 @@ export function CartSidebar() {
                       {/* Quantity Control */}
                       <div className="flex items-center bg-background rounded-lg border border-border/50 h-7 overflow-hidden">
                         <button
-                          onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
                           className="px-2 h-full hover:bg-muted text-foreground transition-colors disabled:opacity-30"
                           disabled={item.quantity <= 1}
                         >
@@ -353,7 +358,7 @@ export function CartSidebar() {
                         </button>
                         <span className="w-7 text-center text-xs font-black font-mono">{item.quantity}</span>
                         <button
-                          onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
                           className="px-2 h-full hover:bg-muted text-foreground transition-colors disabled:opacity-30"
                           disabled={item.quantity >= item.stock}
                         >
@@ -365,7 +370,7 @@ export function CartSidebar() {
                         Rp {(item.price * item.quantity).toLocaleString("id-ID")}
                       </span>
                       <button
-                        onClick={() => removeItem(item.productId)}
+                        onClick={() => removeItem(item.id)}
                         className="ml-1 text-muted-foreground/40 hover:text-destructive transition-colors"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -440,7 +445,9 @@ export function CartSidebar() {
               <div className="bg-muted/30 rounded-xl p-4 border border-border/40 space-y-1.5 text-xs">
                 {items.slice(0, 3).map(item => (
                   <div key={item.id} className="flex justify-between text-muted-foreground">
-                    <span className="truncate pr-2">{item.name} x{item.quantity}</span>
+                    <span className="truncate pr-2">
+                      {item.variantName ? `${item.name} (${item.variantName})` : item.name} x{item.quantity}
+                    </span>
                     <span className="font-mono shrink-0">Rp {(item.price * item.quantity).toLocaleString("id-ID")}</span>
                   </div>
                 ))}

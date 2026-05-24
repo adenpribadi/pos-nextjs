@@ -3,14 +3,21 @@ import { persist } from 'zustand/middleware'
 import { toast } from 'sonner'
 
 export interface CartItem {
-  id: string
+  id: string            // Unique cart row ID (productId + variantId or 'default')
   productId: string
-  name: string
+  variantId?: string    // ID varian yang dipilih (opsional)
+  variantName?: string  // Nama varian untuk ditampilkan (opsional)
+  name: string          // Nama produk saja (tanpa varian)
   price: number
   quantity: number
   stock: number
   image: string | null
   discount: number // Nominal discount per unit, default 0
+}
+
+// Helper untuk membuat composite key unik per baris keranjang
+function makeCartItemId(productId: string, variantId?: string) {
+  return `${productId}::${variantId ?? 'default'}`
 }
 
 interface CartStore {
@@ -21,9 +28,9 @@ interface CartStore {
   
   // Actions
   addItem: (product: Omit<CartItem, 'id' | 'quantity' | 'discount'>) => void
-  removeItem: (productId: string) => void
-  updateQuantity: (productId: string, quantity: number) => void
-  updateItemDiscount: (productId: string, discount: number) => void
+  removeItem: (cartItemId: string) => void
+  updateQuantity: (cartItemId: string, quantity: number) => void
+  updateItemDiscount: (cartItemId: string, discount: number) => void
   setGlobalDiscount: (discount: number) => void
   setAppliedPromo: (promo: { id: string, code: string } | null) => void
   setTaxRate: (rate: number) => void
@@ -45,10 +52,16 @@ export const useCart = create<CartStore>()(
       appliedPromo: null,
 
       addItem: (product) => {
+        const cartItemId = makeCartItemId(product.productId, product.variantId)
         const state = get()
-        const existingItem = state.items.find((item) => item.productId === product.productId)
+        const existingItem = state.items.find((item) => item.id === cartItemId)
 
-        if (existingItem && existingItem.quantity >= product.stock) {
+        // Cek total stok semua baris dari produk yang sama (semua varian)
+        const totalInCartForProduct = state.items
+          .filter(i => i.productId === product.productId)
+          .reduce((sum, i) => sum + i.quantity, 0)
+
+        if (totalInCartForProduct >= product.stock) {
           toast.error("Operasi Ditolak", { 
             description: `Hanya tersedia maksimal ${product.stock} unit untuk ${product.name}.` 
           })
@@ -62,8 +75,12 @@ export const useCart = create<CartStore>()(
           return
         }
 
+        const displayName = product.variantName
+          ? `${product.name} — ${product.variantName}`
+          : product.name
+
         toast.success("Berhasil ditambahkan", { 
-          description: `1x ${product.name} telah masuk ke keranjang.`,
+          description: `1x ${displayName} telah masuk ke keranjang.`,
           duration: 1500
         })
 
@@ -71,7 +88,7 @@ export const useCart = create<CartStore>()(
           if (existingItem) {
             return {
               items: state.items.map((item) =>
-                item.productId === product.productId
+                item.id === cartItemId
                   ? { ...item, quantity: item.quantity + 1 }
                   : item
               ),
@@ -81,34 +98,40 @@ export const useCart = create<CartStore>()(
           return {
             items: [
               ...state.items,
-              { ...product, id: crypto.randomUUID(), quantity: 1, discount: 0 },
+              { ...product, id: cartItemId, quantity: 1, discount: 0 },
             ],
           }
         })
       },
 
-      removeItem: (productId) => {
+      removeItem: (cartItemId) => {
         set((state) => ({
-          items: state.items.filter((item) => item.productId !== productId),
+          items: state.items.filter((item) => item.id !== cartItemId),
         }))
       },
 
-      updateQuantity: (productId, quantity) => {
+      updateQuantity: (cartItemId, quantity) => {
         const state = get()
-        const item = state.items.find((i) => i.productId === productId)
+        const item = state.items.find((i) => i.id === cartItemId)
         if (!item) return
+
+        // Cek total stok semua varian produk yang sama
+        const totalOtherRows = state.items
+          .filter(i => i.productId === item.productId && i.id !== cartItemId)
+          .reduce((sum, i) => sum + i.quantity, 0)
+        const maxForThisRow = item.stock - totalOtherRows
         
         let safeQuantity = quantity;
-        if (quantity > item.stock) {
+        if (quantity > maxForThisRow) {
           toast.error("Melebihi Batas Stok", { 
-            description: `Stok hanya tersisa ${item.stock} untuk baris barang ini.` 
+            description: `Stok hanya tersisa ${maxForThisRow} lagi untuk produk ini.` 
           })
-          safeQuantity = item.stock;
+          safeQuantity = maxForThisRow;
         }
 
         set((state) => ({
           items: state.items.map((item) => {
-            if (item.productId === productId) {
+            if (item.id === cartItemId) {
               const newQty = Math.max(1, safeQuantity)
               return { ...item, quantity: newQty }
             }
@@ -117,10 +140,10 @@ export const useCart = create<CartStore>()(
         }))
       },
 
-      updateItemDiscount: (productId, discount) => {
+      updateItemDiscount: (cartItemId, discount) => {
         set((state) => ({
           items: state.items.map((item) =>
-            item.productId === productId ? { ...item, discount: Math.max(0, discount) } : item
+            item.id === cartItemId ? { ...item, discount: Math.max(0, discount) } : item
           ),
         }))
       },

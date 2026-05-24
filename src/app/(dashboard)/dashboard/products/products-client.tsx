@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Scan, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Scan, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -53,6 +53,7 @@ interface ProductColumn {
     email: string | null
     role: string
   } | null
+  variants?: { id: string; name: string; price: number; sortOrder: number }[]
 }
 
 interface Category {
@@ -106,6 +107,11 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
   const [adjNotes, setAdjNotes] = useState("")
   const [isAdjustingStock, setIsAdjustingStock] = useState(false)
 
+  // Variant states (for add & edit forms)
+  type VariantRow = { id?: string; name: string; price: string }
+  const [addVariants, setAddVariants] = useState<VariantRow[]>([])
+  const [editVariants, setEditVariants] = useState<VariantRow[]>([])
+
   // Sorting states
   const [sortField, setSortField] = useState<'sku' | 'name' | 'category' | 'costPrice' | 'price' | 'stock' | 'status' | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
@@ -148,6 +154,14 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
       setAdjType('in')
       setAdjQty("")
       setAdjNotes("")
+      // Load existing variants into edit state
+      setEditVariants(
+        (editingProduct.variants || []).map(v => ({
+          id: v.id,
+          name: v.name,
+          price: v.price.toString(),
+        }))
+      )
     } else {
       setEditCostPrice("")
       setEditPrice("")
@@ -159,6 +173,7 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
       setAdjType('in')
       setAdjQty("")
       setAdjNotes("")
+      setEditVariants([])
     }
   }, [editingProduct])
 
@@ -171,6 +186,7 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
       setSelectedCategoryId("")
       setShowAddCategoryInput(false)
       setNewCategoryName("")
+      setAddVariants([])
     }
   }, [isAddOpen])
 
@@ -389,6 +405,15 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
     if (compressedFile) {
       formData.set("image", compressedFile)
     }
+    // Inject variants as JSON
+    const validVariants = addVariants.filter(v => v.name.trim() && parseFloat(v.price) >= 0)
+    if (validVariants.length > 0) {
+      formData.set("variants", JSON.stringify(validVariants.map((v, i) => ({
+        name: v.name.trim(),
+        price: parseFloat(v.price),
+        sortOrder: i,
+      }))))
+    }
     const res = await createProduct(formData)
 
     if (res.success) {
@@ -415,6 +440,16 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
     if (compressedFile) {
       formData.set("image", compressedFile)
     }
+    // Inject variants as JSON (include id for existing variants so server can update/delete)
+    formData.set("variants", JSON.stringify(editVariants
+      .filter(v => v.name.trim() && parseFloat(v.price) >= 0)
+      .map((v, i) => ({
+        ...(v.id ? { id: v.id } : {}),
+        name: v.name.trim(),
+        price: parseFloat(v.price),
+        sortOrder: i,
+      }))
+    ))
     const res = await updateProduct(formData)
 
     if (res.success) {
@@ -1127,6 +1162,60 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
                   className="h-10 text-sm px-3 rounded-xl border border-input bg-background/50 focus-visible:ring-2 focus-visible:ring-primary/20"
                 />
               </div>
+
+              {/* Row 5: Variant Pricing */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-muted-foreground/90 flex items-center gap-1.5">
+                    <Tag className="h-3.5 w-3.5" />
+                    Varian Harga
+                    <span className="text-[10px] font-normal text-muted-foreground/60">(opsional)</span>
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setAddVariants(prev => [...prev, { name: "", price: "" }])}
+                    className="h-6 px-2.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all border border-primary/20"
+                  >
+                    <Plus className="h-3 w-3" /> Tambah Varian
+                  </button>
+                </div>
+                {addVariants.length > 0 && (
+                  <div className="space-y-2">
+                    {addVariants.map((v, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Input
+                          placeholder="Nama varian (mis: Dimasak)"
+                          value={v.name}
+                          onChange={e => setAddVariants(prev => prev.map((r, idx) => idx === i ? { ...r, name: e.target.value } : r))}
+                          className="h-9 text-xs flex-1 rounded-xl border border-input bg-background/50"
+                        />
+                        <div className="relative w-32 shrink-0">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted-foreground/60">Rp</span>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            min="0"
+                            value={v.price}
+                            onChange={e => setAddVariants(prev => prev.map((r, idx) => idx === i ? { ...r, price: e.target.value } : r))}
+                            style={{ paddingLeft: "2.2rem" }}
+                            className="h-9 text-xs rounded-xl border border-input bg-background/50"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAddVariants(prev => prev.filter((_, idx) => idx !== i))}
+                          className="h-9 w-9 shrink-0 rounded-xl border border-border/50 bg-muted/20 hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive text-muted-foreground flex items-center justify-center transition-all cursor-pointer"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <p className="text-[10px] text-muted-foreground/60 italic">
+                      Saat diklik di kasir, akan muncul pilihan varian. Kasir juga tetap bisa pilih harga normal.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Sticky dialog footer */}
@@ -1459,6 +1548,60 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
                           Batal
                         </button>
                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Row 5: Variant Pricing */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-muted-foreground/90 flex items-center gap-1.5">
+                      <Tag className="h-3.5 w-3.5" />
+                      Varian Harga
+                      <span className="text-[10px] font-normal text-muted-foreground/60">(opsional)</span>
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => setEditVariants(prev => [...prev, { name: "", price: "" }])}
+                      className="h-6 px-2.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all border border-primary/20"
+                    >
+                      <Plus className="h-3 w-3" /> Tambah Varian
+                    </button>
+                  </div>
+                  {editVariants.length > 0 && (
+                    <div className="space-y-2">
+                      {editVariants.map((v, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Input
+                            placeholder="Nama varian (mis: Dimasak)"
+                            value={v.name}
+                            onChange={e => setEditVariants(prev => prev.map((r, idx) => idx === i ? { ...r, name: e.target.value } : r))}
+                            className="h-9 text-xs flex-1 rounded-xl border border-input bg-background/50"
+                          />
+                          <div className="relative w-32 shrink-0">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted-foreground/60">Rp</span>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              min="0"
+                              value={v.price}
+                              onChange={e => setEditVariants(prev => prev.map((r, idx) => idx === i ? { ...r, price: e.target.value } : r))}
+                              style={{ paddingLeft: "2.2rem" }}
+                              className="h-9 text-xs rounded-xl border border-input bg-background/50"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setEditVariants(prev => prev.filter((_, idx) => idx !== i))}
+                            className="h-9 w-9 shrink-0 rounded-xl border border-border/50 bg-muted/20 hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive text-muted-foreground flex items-center justify-center transition-all cursor-pointer"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <p className="text-[10px] text-muted-foreground/60 italic">
+                        Saat diklik di kasir, akan muncul pilihan varian. Kasir juga tetap bisa pilih harga normal.
+                      </p>
                     </div>
                   )}
                 </div>
