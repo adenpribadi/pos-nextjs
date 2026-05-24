@@ -3,7 +3,7 @@
 import { useSession, signOut } from "next-auth/react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Bell, Search, UserCircle, LogOut, Menu, Store } from "lucide-react"
+import { Bell, Search, LogOut, Menu, Store, Settings } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -88,15 +88,22 @@ export function Header() {
         </Button>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="relative h-11 rounded-2xl pl-3 pr-2 flex items-center gap-3 border border-border/40 bg-muted/20 hover:bg-muted/40 transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/20">
-            <div className="flex flex-col items-end hidden sm:flex">
-              <span className="text-[11px] font-black uppercase tracking-tight text-foreground leading-none">{session?.user?.name || 'Administrator'}</span>
-              <span className="text-[9px] text-primary font-black uppercase tracking-widest mt-0.5 leading-none opacity-80">{session?.user?.role || 'Guest'}</span>
-            </div>
-            <div className="h-8 w-8 rounded-xl bg-zinc-900 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-black/20">
-              {session?.user?.name ? session.user.name.substring(0, 1) : "A"}
-            </div>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <button
+                type="button"
+                className="relative h-11 rounded-2xl pl-3 pr-2 flex items-center gap-3 border border-border/40 bg-muted/20 hover:bg-muted/40 transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/20 cursor-pointer"
+              >
+                <div className="flex flex-col items-end hidden sm:flex">
+                  <span className="text-[11px] font-black uppercase tracking-tight text-foreground leading-none">{session?.user?.name || 'Administrator'}</span>
+                  <span className="text-[9px] text-primary font-black uppercase tracking-widest mt-0.5 leading-none opacity-80">{session?.user?.role || 'Guest'}</span>
+                </div>
+                <div className="h-8 w-8 rounded-xl bg-zinc-900 flex items-center justify-center text-white text-xs font-black shadow-lg shadow-black/20">
+                  {session?.user?.name ? session.user.name.substring(0, 1) : "A"}
+                </div>
+              </button>
+            }
+          />
           <DropdownMenuContent align="end" className="w-64 p-2 rounded-2xl border-border/40 shadow-2xl shadow-black/10">
             <DropdownMenuGroup className="p-2">
               <div className="flex items-center gap-3 px-2 py-3 mb-2 bg-muted/40 rounded-xl">
@@ -109,15 +116,16 @@ export function Header() {
                 </div>
               </div>
               <DropdownMenuSeparator className="bg-border/40 mx-2" />
-              <DropdownMenuItem className="rounded-lg py-2.5 text-xs font-bold tracking-tight cursor-pointer">
-                Profil Akun
-              </DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg py-2.5 text-xs font-bold tracking-tight cursor-pointer">
-                Pengaturan Keamanan
+              <DropdownMenuItem
+                className="rounded-lg py-2.5 text-xs font-bold tracking-tight cursor-pointer"
+                render={<Link href="/dashboard/settings" className="flex items-center gap-2 w-full px-1.5 py-1" />}
+              >
+                <Settings className="h-4 w-4 text-muted-foreground" />
+                Pengaturan
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-border/40 mx-2" />
-            <DropdownMenuItem 
+            <DropdownMenuItem
               className="m-1 rounded-xl py-3 text-[10px] font-black uppercase tracking-widest text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer transition-colors"
               onClick={() => {
                 import("@/hooks/useCart").then((mod) => mod.useCart.getState().clearCart());
