@@ -32,6 +32,7 @@ interface Product {
   sku: string
   name: string
   price: number
+  costPrice: number | null
   image: string | null
   stock: number
   categoryId: string | null
@@ -366,6 +367,7 @@ export function ProductGrid({ initialProducts, categories }: ProductGridProps) {
                             productId: p.id,
                             name: p.name,
                             price: p.price,
+                            costPrice: p.costPrice != null ? Number(p.costPrice) : null,
                             stock: p.stock,
                             image: p.image
                           })}

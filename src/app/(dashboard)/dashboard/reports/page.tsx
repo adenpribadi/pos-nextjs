@@ -19,7 +19,14 @@ export default async function ReportsPage() {
 
   // Format data for the client
   const formattedSales = sales.map(s => {
-    const totalHpp = s.items.reduce((sum, item) => sum + (Number(item.product.costPrice || 0) * item.quantity), 0)
+    // Gunakan costPrice dari SaleItem (snapshot saat transaksi) untuk akurasi.
+    // Jika null (data lama sebelum migrasi), fallback ke costPrice produk saat ini.
+    const totalHpp = s.items.reduce((sum, item) => {
+      const hpp = item.costPrice != null
+        ? Number(item.costPrice)
+        : Number(item.product.costPrice || 0)
+      return sum + (hpp * item.quantity)
+    }, 0)
     const profit = Number(s.totalAmount) - totalHpp
 
     return {
@@ -34,13 +41,18 @@ export default async function ReportsPage() {
       itemsCount: s.items.length,
       totalHpp,
       profit,
-      itemsDetail: s.items.map(i => ({
-        name: i.product.name,
-        qty: i.quantity,
-        price: Number(i.price),
-        costPrice: Number(i.product.costPrice || 0),
-        total: Number(i.total)
-      }))
+      itemsDetail: s.items.map(i => {
+        const hpp = i.costPrice != null
+          ? Number(i.costPrice)
+          : Number(i.product.costPrice || 0)
+        return {
+          name: i.product.name,
+          qty: i.quantity,
+          price: Number(i.price),
+          costPrice: hpp,
+          total: Number(i.total)
+        }
+      })
     }
   })
 

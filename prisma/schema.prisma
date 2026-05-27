@@ -177,6 +177,7 @@ model SupplyShipment {
   supplier    User          @relation("SupplierShipments", fields: [supplierId], references: [id])
   
   quantity    Int
+  costPrice   Decimal?      @db.Decimal(10, 2) // HPP per satuan pada batch ini
   notes       String?
   status      RequestStatus @default(PENDING)
   
@@ -238,6 +239,7 @@ model SaleItem {
   
   quantity  Int
   price     Decimal @db.Decimal(10, 2)
+  costPrice Decimal? @db.Decimal(10, 2) // Snapshot HPP saat transaksi terjadi
   discount  Decimal @db.Decimal(10, 2) @default(0)
   total     Decimal @db.Decimal(10, 2)
 }

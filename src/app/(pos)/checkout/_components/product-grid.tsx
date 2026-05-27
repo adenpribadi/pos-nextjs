@@ -240,6 +240,7 @@ export function ProductGrid({
                     productId: matchedProduct!.id,
                     name: matchedProduct!.name,
                     price: Number(matchedProduct!.price),
+                    costPrice: matchedProduct!.costPrice != null ? Number(matchedProduct!.costPrice) : null,
                     stock: matchedProduct!.stock,
                     image: matchedProduct!.image
                   })
@@ -269,6 +270,7 @@ export function ProductGrid({
                         productId: dbProduct.id,
                         name: dbProduct.name,
                         price: Number(dbProduct.price),
+                        costPrice: dbProduct.costPrice != null ? Number(dbProduct.costPrice) : null,
                         stock: dbProduct.stock,
                         image: dbProduct.image
                       })
@@ -489,6 +491,7 @@ export function ProductGrid({
                     productId: product.id,
                     name: product.name,
                     price: Number(product.price),
+                    costPrice: product.costPrice != null ? Number(product.costPrice) : null,
                     stock: product.stock,
                     image: product.image,
                   })
@@ -651,6 +654,7 @@ export function ProductGrid({
                         variantName: variant.name,
                         name: variantPickerProduct.name,
                         price: variant.price,
+                        costPrice: variantPickerProduct.costPrice != null ? Number(variantPickerProduct.costPrice) : null,
                         stock: variantPickerProduct.stock,
                         image: variantPickerProduct.image,
                       })
@@ -682,6 +686,7 @@ export function ProductGrid({
                       productId: variantPickerProduct.id,
                       name: variantPickerProduct.name,
                       price: variantPickerProduct.price,
+                      costPrice: variantPickerProduct.costPrice != null ? Number(variantPickerProduct.costPrice) : null,
                       stock: variantPickerProduct.stock,
                       image: variantPickerProduct.image,
                     })

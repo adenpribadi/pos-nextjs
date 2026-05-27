@@ -101,7 +101,7 @@ export function CartSidebar() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price, discount: i.discount })),
+          items: items.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price, costPrice: i.costPrice ?? null, discount: i.discount })),
           taxAmount: getTaxAmount(),
           totalAmount: getTotalAmount(),
           discount: discountGlobal,

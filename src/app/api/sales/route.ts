@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
               variantName: item.variantName || null,
               quantity: item.quantity,
               price: item.price,
+              costPrice: item.costPrice ?? null, // Snapshot HPP saat transaksi
               discount: item.discount,
               total: (item.price - item.discount) * item.quantity,
             }))

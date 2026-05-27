@@ -9,6 +9,7 @@ export interface CartItem {
   variantName?: string  // Nama varian untuk ditampilkan (opsional)
   name: string          // Nama produk saja (tanpa varian)
   price: number
+  costPrice: number | null // HPP saat produk ditambahkan ke keranjang
   quantity: number
   stock: number
   image: string | null
