@@ -345,12 +345,12 @@ function AddProductDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Harga Jual <span className="text-destructive">*</span></Label>
-              <Input type="number" min="0" value={price} onChange={e => setPrice(e.target.value)} placeholder="3000" required />
-            </div>
-            <div className="space-y-2">
               <Label>HPP/Satuan</Label>
               <Input type="number" min="0" value={costPrice} onChange={e => setCostPrice(e.target.value)} placeholder="2500" />
+            </div>
+            <div className="space-y-2">
+              <Label>Harga Jual <span className="text-destructive">*</span></Label>
+              <Input type="number" min="0" value={price} onChange={e => setPrice(e.target.value)} placeholder="3000" required />
             </div>
           </div>
           <div className="space-y-2">
@@ -575,6 +575,11 @@ export function SupplyShipmentClient({
                         <div className="flex flex-col">
                           <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Pengirim</span>
                           <span className="text-sm font-semibold">{shipment.supplier.name || "Unknown"}</span>
+                          {shipment.notes && (
+                            <span className="text-[11px] text-muted-foreground/80 mt-1 line-clamp-2" title={shipment.notes}>
+                              📝 {shipment.notes}
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-center font-black text-lg text-foreground/80">{shipment.quantity}</TableCell>
@@ -678,6 +683,11 @@ export function SupplyShipmentClient({
                       <span className="font-mono text-sm font-semibold text-amber-600">HPP: Rp {Number(shipment.costPrice).toLocaleString("id-ID")}</span>
                     )}
                   </div>
+                  {shipment.notes && (
+                    <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded-md border border-border/50">
+                      <span className="font-semibold">Catatan:</span> {shipment.notes}
+                    </div>
+                  )}
                   {isAdmin && shipment.status === "PENDING" && (
                     <div className="grid grid-cols-2 gap-2 pt-2">
                       <Button variant="outline" className="border-emerald-500/50 text-emerald-600 bg-emerald-500/5 hover:bg-emerald-500 hover:text-white" onClick={() => handleApprove(shipment.id)}>
