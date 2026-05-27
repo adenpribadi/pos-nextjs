@@ -144,3 +144,30 @@
   object-fit: cover !important;
   border-radius: 0.75rem;
 }
+
+@media print {
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background-color: white !important;
+    color: black !important;
+  }
+  .h-screen, .overflow-hidden, .overflow-auto {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  aside, header, nav, .sidebar {
+    display: none !important;
+  }
+  main, .flex-1, .mx-auto, .max-w-7xl {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .hidden.md\:block {
+    display: block !important;
+  }
+}

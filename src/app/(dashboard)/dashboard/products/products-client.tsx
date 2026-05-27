@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Scan, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown, Tag } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Scan, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown, Tag, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -603,7 +603,43 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
   }
 
   return (
-    <Card className="border-border/50 shadow-sm bg-card/50 backdrop-blur-md">
+    <>
+      <div className="hidden print:block w-full bg-white text-black p-0 m-0">
+        <div className="text-center mb-4 pb-2 border-b-2 border-black">
+          <h1 className="text-xl font-bold uppercase tracking-wider">Laporan Stok Opname</h1>
+          <p className="mt-1 text-xs text-gray-800">
+            Tanggal Cetak: {new Date().toLocaleDateString('id-ID')} | Waktu: {new Date().toLocaleTimeString('id-ID')}
+          </p>
+        </div>
+        <table className="w-full border-collapse border border-black text-[10px] md:text-xs">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border border-black p-1.5 text-center w-[5%]">No</th>
+              <th className="border border-black p-1.5 text-left w-[15%]">SKU</th>
+              <th className="border border-black p-1.5 text-left w-[30%]">Nama Produk</th>
+              <th className="border border-black p-1.5 text-left w-[15%]">Kategori</th>
+              <th className="border border-black p-1.5 text-center w-[10%]">Stok Sistem</th>
+              <th className="border border-black p-1.5 text-center w-[10%]">Cek Fisik</th>
+              <th className="border border-black p-1.5 text-left w-[15%]">Keterangan</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedData.map((item, idx) => (
+              <tr key={item.id}>
+                <td className="border border-black p-1.5 text-center">{idx + 1}</td>
+                <td className="border border-black p-1.5 font-mono">{item.sku}</td>
+                <td className="border border-black p-1.5">{item.name}</td>
+                <td className="border border-black p-1.5">{item.category}</td>
+                <td className="border border-black p-1.5 text-center font-bold">{item.stock}</td>
+                <td className="border border-black p-1.5"></td>
+                <td className="border border-black p-1.5"></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Card className="border-border/50 shadow-sm bg-card/50 backdrop-blur-md print:hidden">
       <div className="p-6 flex flex-col md:flex-row gap-4 items-center justify-between border-b border-border/50">
         <div className="relative w-full md:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -614,14 +650,32 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button 
-          className="w-full md:w-auto shadow-md"
-          onClick={handleAddClick}
-          disabled={isLoading}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Tambah Produk
-        </Button>
+        <div className="flex w-full md:w-auto gap-2 print:hidden">
+          <Button
+            variant="outline"
+            className="w-full md:w-auto shadow-sm"
+            onClick={() => {
+              // Ensure all items are shown before printing for complete stock opname
+              const oldPageSize = pageSize;
+              setPageSize(1000); // Set to a very large number to show all items
+              setTimeout(() => {
+                window.print();
+                setPageSize(oldPageSize); // Restore after print dialog opens
+              }, 500);
+            }}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Print Stok Opname
+          </Button>
+          <Button 
+            className="w-full md:w-auto shadow-md"
+            onClick={handleAddClick}
+            disabled={isLoading}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Produk
+          </Button>
+        </div>
       </div>
       
       <CardContent className="p-0">
@@ -638,7 +692,7 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
                 {renderSortableHeader('price', 'Harga Jual', undefined, 'right')}
                 {renderSortableHeader('stock', 'Stok', undefined, 'center')}
                 {renderSortableHeader('status', 'Status')}
-                <TableHead className="text-right px-4 font-bold uppercase text-[10px] tracking-wider text-muted-foreground align-middle">Aksi</TableHead>
+                <TableHead className="text-right px-4 font-bold uppercase text-[10px] tracking-wider text-muted-foreground align-middle print:hidden">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -683,7 +737,7 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
                         {item.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right print:hidden">
                       <DropdownMenu>
                         <DropdownMenuTrigger className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring">
                           <span className="sr-only">Buka menu</span>
@@ -1796,5 +1850,6 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
         </DialogContent>
       </Dialog>
     </Card>
+    </>
   )
 }
