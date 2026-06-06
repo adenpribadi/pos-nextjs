@@ -116,6 +116,22 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
   const [sortField, setSortField] = useState<'sku' | 'name' | 'category' | 'costPrice' | 'price' | 'stock' | 'status' | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
+  // Print state
+  const [printMode, setPrintMode] = useState<'stock' | 'price' | null>(null)
+  
+  const handlePrint = (mode: 'stock' | 'price') => {
+    setPrintMode(mode);
+    const oldPageSize = pageSize;
+    setPageSize(10000); // Set to a very large number to show all items
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => {
+        setPageSize(oldPageSize);
+        setPrintMode(null);
+      }, 500); // Restore after print dialog closes
+    }, 500);
+  };
+
   // Pagination & Infinite Scroll states
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -505,6 +521,12 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
     return 0
   })
 
+  const priceListData = [...filteredData].sort((a, b) => {
+    const catCompare = (a.category || "").localeCompare(b.category || "", 'id')
+    if (catCompare !== 0) return catCompare
+    return (a.name || "").localeCompare(b.name || "", 'id')
+  })
+
   const totalPages = Math.ceil(sortedData.length / pageSize)
   const startIndex = (currentPage - 1) * pageSize
   const paginatedDesktopData = sortedData.slice(startIndex, startIndex + pageSize)
@@ -604,40 +626,75 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
 
   return (
     <>
-      <div className="hidden print:block w-full bg-white text-black p-0 m-0">
-        <div className="text-center mb-4 pb-2 border-b-2 border-black">
-          <h1 className="text-xl font-bold uppercase tracking-wider">Laporan Stok Opname</h1>
-          <p className="mt-1 text-xs text-gray-800">
-            Tanggal Cetak: {new Date().toLocaleDateString('id-ID')} | Waktu: {new Date().toLocaleTimeString('id-ID')}
-          </p>
-        </div>
-        <table className="w-full border-collapse border border-black text-[10px] md:text-xs">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-black p-1.5 text-center w-[5%]">No</th>
-              <th className="border border-black p-1.5 text-left w-[15%]">SKU</th>
-              <th className="border border-black p-1.5 text-left w-[30%]">Nama Produk</th>
-              <th className="border border-black p-1.5 text-left w-[15%]">Kategori</th>
-              <th className="border border-black p-1.5 text-center w-[10%]">Stok Sistem</th>
-              <th className="border border-black p-1.5 text-center w-[10%]">Cek Fisik</th>
-              <th className="border border-black p-1.5 text-left w-[15%]">Keterangan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedData.map((item, idx) => (
-              <tr key={item.id}>
-                <td className="border border-black p-1.5 text-center">{idx + 1}</td>
-                <td className="border border-black p-1.5 font-mono">{item.sku}</td>
-                <td className="border border-black p-1.5">{item.name}</td>
-                <td className="border border-black p-1.5">{item.category}</td>
-                <td className="border border-black p-1.5 text-center font-bold">{item.stock}</td>
-                <td className="border border-black p-1.5"></td>
-                <td className="border border-black p-1.5"></td>
+      {printMode === 'stock' && (
+        <div className="hidden print:block w-full bg-white text-black p-0 m-0">
+          <div className="text-center mb-4 pb-2 border-b-2 border-black">
+            <h1 className="text-xl font-bold uppercase tracking-wider">Laporan Stok Opname</h1>
+            <p className="mt-1 text-xs text-gray-800">
+              Tanggal Cetak: {new Date().toLocaleDateString('id-ID')} | Waktu: {new Date().toLocaleTimeString('id-ID')}
+            </p>
+          </div>
+          <table className="w-full border-collapse border border-black text-[10px] md:text-xs">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-black p-1.5 text-center w-[5%]">No</th>
+                <th className="border border-black p-1.5 text-left w-[15%]">SKU</th>
+                <th className="border border-black p-1.5 text-left w-[30%]">Nama Produk</th>
+                <th className="border border-black p-1.5 text-left w-[15%]">Kategori</th>
+                <th className="border border-black p-1.5 text-center w-[10%]">Stok Sistem</th>
+                <th className="border border-black p-1.5 text-center w-[10%]">Cek Fisik</th>
+                <th className="border border-black p-1.5 text-left w-[15%]">Keterangan</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {sortedData.map((item, idx) => (
+                <tr key={item.id}>
+                  <td className="border border-black p-1.5 text-center">{idx + 1}</td>
+                  <td className="border border-black p-1.5 font-mono">{item.sku}</td>
+                  <td className="border border-black p-1.5">{item.name}</td>
+                  <td className="border border-black p-1.5">{item.category}</td>
+                  <td className="border border-black p-1.5 text-center font-bold">{item.stock}</td>
+                  <td className="border border-black p-1.5"></td>
+                  <td className="border border-black p-1.5"></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {printMode === 'price' && (
+        <div className="hidden print:block w-full bg-white text-black p-0 m-0">
+          <div className="text-center mb-4 pb-2 border-b-2 border-black">
+            <h1 className="text-xl font-bold uppercase tracking-wider">Daftar Harga Produk</h1>
+            <p className="mt-1 text-xs text-gray-800">
+              Tanggal Cetak: {new Date().toLocaleDateString('id-ID')} | Waktu: {new Date().toLocaleTimeString('id-ID')}
+            </p>
+          </div>
+          <table className="w-full border-collapse border border-black text-[10px] md:text-xs">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-black p-1.5 text-center w-[5%]">No</th>
+                <th className="border border-black p-1.5 text-left w-[20%]">Kategori</th>
+                <th className="border border-black p-1.5 text-left w-[15%]">SKU</th>
+                <th className="border border-black p-1.5 text-left w-[40%]">Nama Produk</th>
+                <th className="border border-black p-1.5 text-right w-[20%]">Harga Jual</th>
+              </tr>
+            </thead>
+            <tbody>
+              {priceListData.map((item, idx) => (
+                <tr key={item.id}>
+                  <td className="border border-black p-1.5 text-center">{idx + 1}</td>
+                  <td className="border border-black p-1.5">{item.category}</td>
+                  <td className="border border-black p-1.5 font-mono">{item.sku}</td>
+                  <td className="border border-black p-1.5 font-bold">{item.name}</td>
+                  <td className="border border-black p-1.5 text-right font-bold text-sm">Rp {item.price.toLocaleString('id-ID')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <Card className="border-border/50 shadow-sm bg-card/50 backdrop-blur-md print:hidden">
       <div className="p-6 flex flex-col md:flex-row gap-4 items-center justify-between border-b border-border/50">
@@ -650,22 +707,22 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex w-full md:w-auto gap-2 print:hidden">
+        <div className="flex w-full md:w-auto gap-2 print:hidden flex-wrap md:flex-nowrap">
           <Button
             variant="outline"
             className="w-full md:w-auto shadow-sm"
-            onClick={() => {
-              // Ensure all items are shown before printing for complete stock opname
-              const oldPageSize = pageSize;
-              setPageSize(1000); // Set to a very large number to show all items
-              setTimeout(() => {
-                window.print();
-                setPageSize(oldPageSize); // Restore after print dialog opens
-              }, 500);
-            }}
+            onClick={() => handlePrint('stock')}
           >
             <Printer className="mr-2 h-4 w-4" />
-            Print Stok Opname
+            Stok Opname
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full md:w-auto shadow-sm"
+            onClick={() => handlePrint('price')}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Daftar Harga
           </Button>
           <Button 
             className="w-full md:w-auto shadow-md"
