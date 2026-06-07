@@ -496,4 +496,55 @@ export async function adjustProductStock(formData: FormData) {
   }
 }
 
+export async function submitStockOpname(data: { productId: string, actualStock: number, systemStock: number }[], notes: string) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user || (session.user.role !== "ADMIN" && session.user.role !== "MANAGER")) {
+      return { success: false, error: "Akses Ditolak" }
+    }
+
+    if (!data || data.length === 0) {
+      return { success: false, error: "Data stock opname kosong." }
+    }
+
+    let adjustmentCount = 0;
+
+    await prisma.$transaction(async (tx) => {
+      for (const item of data) {
+        const delta = item.actualStock - item.systemStock;
+
+        if (delta !== 0) {
+          // Update product stock
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              stock: item.actualStock,
+              updatedById: session.user.id,
+            }
+          });
+
+          // Create inventory transaction
+          await tx.inventoryTransaction.create({
+            data: {
+              productId: item.productId,
+              type: "ADJUSTMENT",
+              quantity: delta,
+              notes: notes || "Hasil Stock Opname",
+              userId: session.user.id
+            }
+          });
+          
+          adjustmentCount++;
+        }
+      }
+    });
+
+    revalidatePath("/dashboard/products")
+    revalidatePath("/dashboard/inventory")
+    return { success: true, adjustmentCount }
+  } catch (error) {
+    console.error("Gagal menyimpan hasil stock opname:", error)
+    return { success: false, error: "Terjadi kesalahan saat menyimpan hasil stock opname." }
+  }
+}
 

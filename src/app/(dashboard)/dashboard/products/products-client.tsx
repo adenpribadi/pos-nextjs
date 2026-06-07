@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Plus, Search, MoreHorizontal, Edit, Trash2, Scan, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown, Tag, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -62,6 +62,7 @@ interface Category {
 }
 
 export function ProductsClient({ data, categories }: { data: ProductColumn[], categories: Category[] }) {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
   const [isAddOpen, setIsAddOpen] = useState(false)
@@ -715,6 +716,14 @@ export function ProductsClient({ data, categories }: { data: ProductColumn[], ca
           >
             <Printer className="mr-2 h-4 w-4" />
             Stok Opname
+          </Button>
+          <Button
+            variant="default"
+            className="w-full md:w-auto shadow-sm"
+            onClick={() => router.push('/dashboard/inventory/stock-opname')}
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            Input Hasil Opname
           </Button>
           <Button
             variant="outline"
