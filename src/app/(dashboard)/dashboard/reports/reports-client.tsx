@@ -492,7 +492,7 @@ function SortableHead({
 
 // ─── Main Client Component ────────────────────────────────────────────────────
 
-export function ReportsClient({ data }: { data: SaleReport[] }) {
+export function ReportsClient({ data, expenses = [] }: { data: SaleReport[], expenses?: any[] }) {
   const PAGE_SIZE = 10
   const [searchTerm, setSearchTerm] = useState("")
   const [sortKey, setSortKey]       = useState<SortKey>("date")
@@ -587,6 +587,20 @@ export function ReportsClient({ data }: { data: SaleReport[] }) {
     return matchSearch && matchDate
   })
 
+  const filteredExpenses = expenses.filter((item) => {
+    let matchDate = true
+    if (quickPeriod) {
+      const cutoff = new Date()
+      cutoff.setMonth(cutoff.getMonth() - quickPeriod)
+      matchDate = new Date(item.date) >= cutoff
+    } else if (filterYear && filterMonth) {
+      matchDate = item.date.startsWith(`${filterYear}-${filterMonth}`)
+    } else if (filterYear) {
+      matchDate = item.date.startsWith(filterYear)
+    }
+    return matchDate
+  })
+
   const sortedData = [...filteredData].sort((a, b) => {
     let valA: string | number = a[sortKey as keyof SaleReport] as string | number
     let valB: string | number = b[sortKey as keyof SaleReport] as string | number
@@ -612,6 +626,9 @@ export function ReportsClient({ data }: { data: SaleReport[] }) {
   const totalHpp          = filteredData.reduce((sum, item) => sum + item.totalHpp, 0)
   const totalProfit       = filteredData.reduce((sum, item) => sum + item.profit, 0)
   const totalTransactions = filteredData.length
+  
+  const totalExpenseAmount = filteredExpenses.reduce((sum, item) => sum + item.amount, 0)
+  const netProfit          = totalProfit - totalExpenseAmount
 
   const handleExportXLSX = () => {
     if (filteredData.length === 0) {
@@ -640,6 +657,8 @@ export function ReportsClient({ data }: { data: SaleReport[] }) {
         ["Total Pendapatan",   totalRevenue,  "Omzet bersih setelah diskon"],
         ["Total Modal (HPP)", totalHpp,      "Harga Pokok Penjualan"],
         ["Total Laba Kotor",  totalProfit,   "Pendapatan dikurangi HPP"],
+        ["Total Pengeluaran", totalExpenseAmount, "Biaya Operasional"],
+        ["Total Laba Bersih", netProfit, "Laba Kotor dikurangi Pengeluaran"],
         ["Total Pajak",       filteredData.reduce((s,i) => s + i.tax, 0), ""],
         ["Total Diskon",      filteredData.reduce((s,i) => s + i.discount, 0), ""],
         [""],
@@ -747,7 +766,7 @@ export function ReportsClient({ data }: { data: SaleReport[] }) {
 
   return (
     <div className="space-y-6 mt-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="bg-primary/5 border-primary/20 shadow-sm">
           <CardContent className="p-5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Total Pendapatan</p>
@@ -764,12 +783,21 @@ export function ReportsClient({ data }: { data: SaleReport[] }) {
             </p>
           </CardContent>
         </Card>
+        <Card className="bg-orange-500/5 border-orange-500/20 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+          <CardContent className="p-5 relative z-10">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-orange-600 mb-1">Total Pengeluaran</p>
+            <p className="text-2xl font-black tracking-tight text-orange-600">
+              {formatRp(totalExpenseAmount)}
+            </p>
+          </CardContent>
+        </Card>
         <Card className="bg-emerald-500/5 border-emerald-500/20 shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
           <CardContent className="p-5 relative z-10">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1">Total Laba Kotor</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 mb-1">Laba Bersih</p>
             <p className="text-2xl font-black tracking-tight text-emerald-600">
-              {formatRp(totalProfit)}
+              {formatRp(netProfit)}
             </p>
           </CardContent>
         </Card>

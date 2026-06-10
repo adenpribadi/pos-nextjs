@@ -24,6 +24,7 @@ export async function getStoreSettings() {
       bankName: "",
       bankAccountNumber: "",
       bankAccountName: "",
+      isOnline: true,
     }
   }
 
@@ -45,12 +46,13 @@ export async function saveStoreSettings(formData: FormData) {
   const bankName = (formData.get("bankName") as string) || null
   const bankAccountNumber = (formData.get("bankAccountNumber") as string) || null
   const bankAccountName = (formData.get("bankAccountName") as string) || null
+  const isOnline = formData.get("isOnline") === "true"
 
   try {
     await prisma.storeSettings.upsert({
       where: { id: SETTINGS_ID },
-      update: { storeName, address, phone, taxEnabled, taxRate, bankName, bankAccountNumber, bankAccountName },
-      create: { id: SETTINGS_ID, storeName, address, phone, taxEnabled, taxRate, bankName, bankAccountNumber, bankAccountName },
+      update: { storeName, address, phone, taxEnabled, taxRate, bankName, bankAccountNumber, bankAccountName, isOnline },
+      create: { id: SETTINGS_ID, storeName, address, phone, taxEnabled, taxRate, bankName, bankAccountNumber, bankAccountName, isOnline },
     })
 
     revalidatePath("/dashboard/settings")

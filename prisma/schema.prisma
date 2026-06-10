@@ -43,6 +43,9 @@ model User {
   sessions      Session[]
   updatedProducts Product[] @relation("ProductUpdates")
   
+  expenses      Expense[] @relation("UserExpenses")
+  approvedExpenses Expense[] @relation("AdminExpenseApprovals")
+  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -90,6 +93,9 @@ model StoreSettings {
   bankName          String?
   bankAccountNumber String?
   bankAccountName   String?
+  
+  isOnline          Boolean  @default(true) // Status Toko (Online/Offline)
+  
   updatedAt         DateTime @updatedAt
 }
 
@@ -183,6 +189,40 @@ model SupplyShipment {
   
   adminId     String?
   admin       User?         @relation("AdminApprovals", fields: [adminId], references: [id])
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+// =======================
+// OPERATIONAL EXPENSES
+// =======================
+
+model ExpenseCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  expenses    Expense[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Expense {
+  id          String        @id @default(cuid())
+  amount      Decimal       @db.Decimal(10, 2)
+  date        DateTime      @default(now())
+  description String
+  receiptImage String?
+  status      RequestStatus @default(PENDING)
+  
+  categoryId  String?
+  category    ExpenseCategory? @relation(fields: [categoryId], references: [id])
+  
+  userId      String
+  user        User          @relation("UserExpenses", fields: [userId], references: [id])
+  
+  adminId     String?
+  admin       User?         @relation("AdminExpenseApprovals", fields: [adminId], references: [id])
   
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt

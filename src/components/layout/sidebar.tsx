@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   Bell,
   Star,
-  Ticket
+  Ticket,
+  Receipt
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { getPendingSalesCount } from "@/app/actions/sale"
@@ -32,6 +33,7 @@ export const menuItems = [
   { name: "Data Pelanggan", href: "/dashboard/customers", icon: Users, roles: ["ADMIN", "MANAGER", "CASHIER"] },
   { name: "Rating & Ulasan", href: "/dashboard/reviews", icon: Star, roles: ["ADMIN", "MANAGER"] },
   { name: "Laporan Keuangan", href: "/dashboard/reports", icon: LineChart, roles: ["ADMIN", "MANAGER"] },
+  { name: "Pengeluaran", href: "/dashboard/expenses", icon: Receipt, roles: ["ADMIN", "MANAGER", "CASHIER"] },
   { name: "Pengaturan", href: "/dashboard/settings", icon: Settings, roles: ["ADMIN", "MANAGER", "CASHIER", "SUPPLIER"] },
 ]
 

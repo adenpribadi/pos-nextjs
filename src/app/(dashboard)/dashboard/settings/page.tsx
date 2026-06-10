@@ -33,6 +33,7 @@ export default function SettingsPage() {
     bankName: "",
     bankAccountNumber: "",
     bankAccountName: "",
+    isOnline: true,
   })
   const [isLoadingSettings, setIsLoadingSettings] = useState(true)
 
@@ -61,6 +62,7 @@ export default function SettingsPage() {
           bankName: s.bankName || "",
           bankAccountNumber: s.bankAccountNumber || "",
           bankAccountName: s.bankAccountName || "",
+          isOnline: s.isOnline ?? true,
         })
         setIsLoadingSettings(false)
       })
@@ -72,6 +74,7 @@ export default function SettingsPage() {
     const formData = new FormData(e.currentTarget)
     formData.set("taxEnabled", String(settings.taxEnabled))
     formData.set("taxRate", String(settings.taxRate))
+    formData.set("isOnline", String(settings.isOnline))
 
     startTransition(async () => {
       const res = await saveStoreSettings(formData)
@@ -224,6 +227,56 @@ export default function SettingsPage() {
                 <CardFooter className="bg-muted/30 border-t border-border/40 py-4 flex justify-end px-6">
                   <Button type="submit" disabled={isPending || isLoadingSettings} className="bg-zinc-900 text-white hover:bg-zinc-800 font-bold px-8 rounded-xl h-11 transition-all active:scale-95">
                     {isPending ? "Menyimpan..." : "Simpan Info Toko"}
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              {/* Status Toko (Online / Offline) */}
+              <Card className="border-border/40 bg-card/60 backdrop-blur-xl shadow-xl shadow-black/5 overflow-hidden rounded-3xl">
+                <CardHeader className="border-b border-border/40 pb-6 bg-muted/20">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-zinc-900 text-white flex items-center justify-center shadow-lg shadow-black/20">
+                      <Store className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-black tracking-tight">Status Toko</CardTitle>
+                      <CardDescription className="text-xs uppercase tracking-widest font-bold opacity-60">Store operational status</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6 pt-6 p-4 sm:p-6">
+                  {isLoadingSettings ? (
+                    <div className="text-sm text-muted-foreground animate-pulse">Memuat status toko...</div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-border/40 bg-background/50 shadow-sm">
+                        <div className="space-y-0.5 max-w-[70%]">
+                          <p className="font-black text-[10px] sm:text-sm uppercase tracking-wider">Toko Aktif</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">
+                            Matikan ini jika toko sedang tutup agar pelanggan tidak dapat memesan.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={settings.isOnline ?? true}
+                          onCheckedChange={val => setSettings(s => ({ ...s, isOnline: val }))}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                      </div>
+
+                      <div className={`flex items-center gap-3 p-4 rounded-2xl border transition-all duration-500 ${settings.isOnline ? "bg-primary/5 border-primary/20" : "bg-red-500/10 border-red-500/20 opacity-90"}`}>
+                        <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${settings.isOnline ? "bg-primary animate-pulse" : "bg-red-500"}`}></div>
+                        <p className={`text-xs font-black uppercase tracking-widest ${settings.isOnline ? "text-primary" : "text-red-500"}`}>
+                          {settings.isOnline
+                            ? "TOKO ONLINE — Pelanggan dapat memesan dari katalog."
+                            : "TOKO OFFLINE — Katalog disembunyikan."}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+                <CardFooter className="bg-muted/30 border-t border-border/40 py-4 flex justify-end px-6">
+                  <Button type="submit" disabled={isPending || isLoadingSettings} className="bg-zinc-900 text-white hover:bg-zinc-800 font-bold px-8 rounded-xl h-11 transition-all active:scale-95">
+                    {isPending ? "Menyimpan..." : "Update Status Toko"}
                   </Button>
                 </CardFooter>
               </Card>

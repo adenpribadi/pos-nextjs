@@ -16,6 +16,11 @@ export default async function ReportsPage() {
       }
     }
   })
+  // Fetch approved expenses
+  const expenses = await prisma.expense.findMany({
+    where: { status: "APPROVED" },
+    include: { category: true }
+  })
 
   // Format data for the client
   const formattedSales = sales.map(s => {
@@ -56,18 +61,26 @@ export default async function ReportsPage() {
     }
   })
 
+  const formattedExpenses = expenses.map(e => ({
+    id: e.id,
+    date: e.date.toISOString(),
+    amount: Number(e.amount),
+    description: e.description,
+    categoryName: e.category?.name || "Lainnya"
+  }))
+
   return (
     <div className="flex-1 space-y-4">
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Laporan Penjualan</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Laporan Keuangan</h2>
           <p className="text-muted-foreground mt-1">
-            Data rekam jejak transaksi finansial yang diproses melalui sistem WarungBintang.
+            Data rekam jejak transaksi finansial dan operasional yang diproses melalui sistem WarungBintang.
           </p>
         </div>
       </div>
       
-      <ReportsClient data={formattedSales} />
+      <ReportsClient data={formattedSales} expenses={formattedExpenses} />
     </div>
   )
 }
