@@ -30,6 +30,7 @@ export default async function SupplyShipmentsPage() {
       stock: true,
       image: true,
       costPrice: true,
+      price: true,
     },
     orderBy: { name: "asc" }
   })
@@ -39,10 +40,10 @@ export default async function SupplyShipmentsPage() {
     where: isAdmin ? {} : { supplierId: session.user.id },
     include: {
       product: {
-        select: { name: true, sku: true }
+        select: { name: true, sku: true, price: true }
       },
       supplier: {
-        select: { name: true }
+        select: { id: true, name: true }
       },
       admin: {
         select: { name: true }
@@ -77,10 +78,15 @@ export default async function SupplyShipmentsPage() {
         products={products.map(p => ({
           ...p,
           costPrice: p.costPrice != null ? Number(p.costPrice) : null,
+          price: Number(p.price),
         }))}
         shipments={shipments.map(s => ({
           ...s,
           costPrice: s.costPrice != null ? Number(s.costPrice) : null,
+          product: {
+            ...s.product,
+            price: Number(s.product.price),
+          }
         }))}
         suppliers={suppliers}
         isAdmin={isAdmin}

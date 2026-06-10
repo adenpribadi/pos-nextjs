@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Plus, Minus, Truck, Clock, CheckCircle2, XCircle, Search, X, UserPlus, Package, ChevronDown, Trash2 } from "lucide-react"
+import { Plus, Minus, Truck, Clock, CheckCircle2, XCircle, Search, X, UserPlus, Package, ChevronDown, Trash2, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, TrendingUp, WalletCards, Coins } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,6 +30,7 @@ interface Product {
   stock: number
   image: string | null
   costPrice?: number | null
+  price: number
 }
 
 interface Supplier {
@@ -41,8 +42,8 @@ interface Supplier {
 interface SupplyShipment {
   id: string
   productId: string
-  product: { name: string; sku: string }
-  supplier: { name: string | null }
+  product: { name: string; sku: string; price: number }
+  supplier: { id: string; name: string | null }
   admin: { name: string | null } | null
   quantity: number
   costPrice: number | null
@@ -317,6 +318,7 @@ function AddProductDialog({
         stock: res.product.stock,
         image: res.product.image,
         costPrice: res.product.costPrice != null ? Number(res.product.costPrice) : null,
+        price: Number(res.product.price),
       })
       onClose()
     } else {
@@ -403,6 +405,94 @@ export function SupplyShipmentClient({
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [addProductInitialName, setAddProductInitialName] = useState("")
   const [addProductTargetRowUid, setAddProductTargetRowUid] = useState<string | null>(null)
+
+  // ── Filter state ────────────────────────────────────────────────────────
+  const [filterStartDate, setFilterStartDate] = useState<string>("")
+  const [filterEndDate, setFilterEndDate] = useState<string>("")
+  const [filterSupplierId, setFilterSupplierId] = useState<string>("all")
+
+  const setDefaultFilters = useCallback(() => {
+    const today = new Date()
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    
+    const fmt = (d: Date) => {
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      return `${yyyy}-${mm}-${dd}`
+    }
+    
+    setFilterStartDate(fmt(firstDay))
+    setFilterEndDate(fmt(lastDay))
+    setFilterSupplierId("all")
+  }, [])
+
+  useEffect(() => {
+    setDefaultFilters()
+  }, [setDefaultFilters])
+
+  const filteredShipments = shipments.filter(shipment => {
+    if (filterStartDate || filterEndDate) {
+      const d = new Date(shipment.createdAt)
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      const shipmentDate = `${yyyy}-${mm}-${dd}`
+      
+      if (filterStartDate && shipmentDate < filterStartDate) return false
+      if (filterEndDate && shipmentDate > filterEndDate) return false
+    }
+    if (filterSupplierId !== "all") {
+      if (shipment.supplier.id !== filterSupplierId) return false
+    }
+    return true
+  })
+
+  // ── Summary ────────────────────────────────────────────────────────────────
+  const profitSummary = filteredShipments
+    .filter(s => s.status === "APPROVED")
+    .reduce(
+      (acc, s) => {
+        const qty = s.quantity
+        const cost = (s.costPrice || 0) * qty
+        const revenue = (s.product.price || 0) * qty
+        return {
+          totalCost: acc.totalCost + cost,
+          totalRevenue: acc.totalRevenue + revenue,
+          totalProfit: acc.totalProfit + (revenue - cost),
+          itemCount: acc.itemCount + qty,
+        }
+      },
+      { totalCost: 0, totalRevenue: 0, totalProfit: 0, itemCount: 0 }
+    )
+
+  // ── Pagination & Infinite Scroll ───────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1)
+  const [mobileVisibleCount, setMobileVisibleCount] = useState(5)
+  const [desktopItemsPerPage, setDesktopItemsPerPage] = useState(10)
+
+  useEffect(() => {
+    setCurrentPage(1)
+    setMobileVisibleCount(5)
+  }, [filterStartDate, filterEndDate, filterSupplierId])
+
+  const desktopTotalPages = Math.ceil(filteredShipments.length / desktopItemsPerPage)
+  const desktopData = filteredShipments.slice((currentPage - 1) * desktopItemsPerPage, currentPage * desktopItemsPerPage)
+  const mobileData = filteredShipments.slice(0, mobileVisibleCount)
+
+  const observer = useRef<IntersectionObserver | null>(null)
+  const lastElementRef = useCallback((node: HTMLDivElement | null) => {
+    if (observer.current) observer.current.disconnect()
+    if (node) {
+      observer.current = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) {
+          setMobileVisibleCount(prev => prev + 5)
+        }
+      })
+      observer.current.observe(node)
+    }
+  }, [])
 
   // ── Row helpers ────────────────────────────────────────────────────────────
 
@@ -533,6 +623,91 @@ export function SupplyShipmentClient({
         </CardContent>
       </Card>
 
+      {/* ── Summary Stats ──────────────────────────────────────────────────── */}
+      {isAdmin && profitSummary.itemCount > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="border-border/50 shadow-sm bg-card/50 backdrop-blur-md">
+            <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Nilai HPP</CardTitle>
+              <WalletCards className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="text-2xl font-bold">Rp {profitSummary.totalCost.toLocaleString("id-ID")}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Total modal dari {profitSummary.itemCount} unit produk.
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-border/50 shadow-sm bg-card/50 backdrop-blur-md">
+            <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Estimasi Omset</CardTitle>
+              <Coins className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="text-2xl font-bold text-primary">Rp {profitSummary.totalRevenue.toLocaleString("id-ID")}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Jika terjual habis dengan harga jual saat ini.
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border-border/50 shadow-sm bg-card/50 backdrop-blur-md border-emerald-500/20 bg-emerald-500/5">
+            <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-emerald-600 uppercase tracking-wider">Estimasi Keuntungan</CardTitle>
+              <TrendingUp className="h-4 w-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="text-2xl font-bold text-emerald-600">Rp {profitSummary.totalProfit.toLocaleString("id-ID")}</div>
+              <p className="text-xs text-emerald-600/70 mt-1">
+                Omset dikurangi HPP pasokan disetujui.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ── Filters ──────────────────────────────────────────────────────── */}
+      <div className="relative z-10 flex flex-col sm:flex-row gap-4 items-end bg-card/50 backdrop-blur-md p-4 rounded-xl border border-border/50 shadow-sm">
+        <div className="space-y-1.5 w-full sm:w-[320px]">
+          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Rentang Tanggal</Label>
+          <div className="flex items-center gap-2">
+            <Input 
+              type="date" 
+              value={filterStartDate} 
+              onChange={e => setFilterStartDate(e.target.value)}
+              className="w-full"
+            />
+            <span className="text-xs text-muted-foreground font-medium">s/d</span>
+            <Input 
+              type="date" 
+              value={filterEndDate} 
+              onChange={e => setFilterEndDate(e.target.value)}
+              className="w-full"
+            />
+          </div>
+        </div>
+        {isAdmin && (
+          <div className="space-y-1.5 w-full sm:w-[250px]">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Supplier</Label>
+            <Combobox
+              options={[{ id: "all", label: "Semua Supplier" }, ...supplierOptions]}
+              value={filterSupplierId}
+              onChange={(id) => setFilterSupplierId(id || "all")}
+              placeholder="Pilih Supplier..."
+            />
+          </div>
+        )}
+        {(filterStartDate || filterEndDate || filterSupplierId !== "all") && (
+          <Button 
+            variant="ghost" 
+            onClick={setDefaultFilters}
+            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 mb-0.5"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+        )}
+      </div>
+
       {/* ── Shipment Table ───────────────────────────────────────────────────── */}
       <Card className="border-border/50 shadow-sm bg-card/50 backdrop-blur-md">
         <CardHeader className="border-b border-border/50">
@@ -546,54 +721,55 @@ export function SupplyShipmentClient({
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow>
+                  <TableHead className="whitespace-nowrap">Tgl. Pengajuan</TableHead>
+                  <TableHead>SKU</TableHead>
                   <TableHead>Produk</TableHead>
-                  <TableHead>Pengirim (Supplier)</TableHead>
-                  <TableHead className="text-center">Jumlah</TableHead>
+                  <TableHead>Supplier</TableHead>
+                  <TableHead className="text-right">Jumlah</TableHead>
                   <TableHead className="text-right">HPP/Satuan</TableHead>
-                  <TableHead>Status &amp; Verifikator</TableHead>
-                  <TableHead className="text-right">Riwayat Waktu</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="whitespace-nowrap">Tgl. Selesai</TableHead>
+                  <TableHead>Verifikator</TableHead>
                   {isAdmin && <TableHead className="text-right">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {shipments.length === 0 ? (
+                {desktopData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 7 : 6} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={isAdmin ? 10 : 9} className="h-32 text-center text-muted-foreground">
                       Belum ada data pengiriman pasokan.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  shipments.map(shipment => (
+                  desktopData.map(shipment => (
                     <TableRow key={shipment.id} className="group/row">
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium group-hover/row:text-primary transition-colors">{shipment.product.name}</span>
-                          <span className="text-[10px] text-muted-foreground uppercase font-mono">{shipment.product.sku}</span>
-                        </div>
+                      <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                        {new Date(shipment.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Pengirim</span>
-                          <span className="text-sm font-semibold">{shipment.supplier.name || "Unknown"}</span>
-                          {shipment.notes && (
-                            <span className="text-[11px] text-muted-foreground/80 mt-1 line-clamp-2" title={shipment.notes}>
-                              📝 {shipment.notes}
-                            </span>
-                          )}
-                        </div>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {shipment.product.sku}
                       </TableCell>
-                      <TableCell className="text-center font-black text-lg text-foreground/80">{shipment.quantity}</TableCell>
-                      <TableCell className="text-right">
-                        {shipment.costPrice != null ? (
-                          <span className="font-mono text-sm font-semibold text-amber-600">
-                            Rp {Number(shipment.costPrice).toLocaleString("id-ID")}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/40 text-xs">—</span>
+                      <TableCell className="font-medium text-sm group-hover/row:text-primary transition-colors">
+                        {shipment.product.name}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {shipment.supplier.name || "Unknown"}
+                        {shipment.notes && (
+                          <span className="text-muted-foreground ml-1" title={shipment.notes}>📝</span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-2">
+                      <TableCell className="text-right font-bold text-sm">
+                        {shipment.quantity}
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        {shipment.costPrice != null ? (
+                          <span className="text-amber-600 font-medium">Rp {Number(shipment.costPrice).toLocaleString("id-ID")}</span>
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center">
                           <Badge
                             variant={shipment.status === "APPROVED" ? "default" : shipment.status === "REJECTED" ? "destructive" : "secondary"}
                             className={cn(
@@ -607,44 +783,28 @@ export function SupplyShipmentClient({
                             {shipment.status === "REJECTED" && <XCircle className="h-3 w-3" />}
                             {shipment.status === "PENDING" ? "MENUNGGU" : shipment.status}
                           </Badge>
-                          {shipment.status !== "PENDING" && shipment.admin && (
-                            <div className="flex flex-col">
-                              <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Verifikator</span>
-                              <span className="text-[10px] font-medium text-foreground">{shipment.admin.name}</span>
-                            </div>
-                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex flex-col gap-2">
-                          <div className="flex flex-col">
-                            <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Diajukan</span>
-                            <span className="text-xs font-semibold">
-                              {new Date(shipment.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                          </div>
-                          {shipment.status !== "PENDING" && (
-                            <div className="flex flex-col">
-                              <span className={cn("text-[9px] uppercase font-bold tracking-wider", shipment.status === "APPROVED" ? "text-emerald-600" : "text-destructive")}>
-                                {shipment.status === "APPROVED" ? "Disetujui" : "Ditolak"}
-                              </span>
-                              <span className="text-xs font-semibold text-foreground/70">
-                                {new Date(shipment.updatedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                      <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                        {shipment.status !== "PENDING" 
+                          ? new Date(shipment.updatedAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) 
+                          : "—"}
                       </TableCell>
-                      {isAdmin && shipment.status === "PENDING" && (
+                      <TableCell className="text-sm">
+                        {shipment.status !== "PENDING" && shipment.admin ? shipment.admin.name : "—"}
+                      </TableCell>
+                      {isAdmin && (
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm" className="h-8 border-emerald-500/50 text-emerald-500 hover:bg-emerald-50 hover:border-emerald-500" onClick={() => handleApprove(shipment.id)}>
-                              Terima
-                            </Button>
-                            <Button variant="outline" size="sm" className="h-8 border-destructive/50 text-destructive hover:bg-destructive/5 hover:border-destructive" onClick={() => handleReject(shipment.id)}>
-                              Tolak
-                            </Button>
-                          </div>
+                          {shipment.status === "PENDING" && (
+                            <div className="flex justify-end gap-2">
+                              <Button variant="outline" size="sm" className="h-8 border-emerald-500/50 text-emerald-500 hover:bg-emerald-50 hover:border-emerald-500" onClick={() => handleApprove(shipment.id)}>
+                                Terima
+                              </Button>
+                              <Button variant="outline" size="sm" className="h-8 border-destructive/50 text-destructive hover:bg-destructive/5 hover:border-destructive" onClick={() => handleReject(shipment.id)}>
+                                Tolak
+                              </Button>
+                            </div>
+                          )}
                         </TableCell>
                       )}
                     </TableRow>
@@ -652,14 +812,104 @@ export function SupplyShipmentClient({
                 )}
               </TableBody>
             </Table>
+            {desktopTotalPages > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-4 p-4 border-t border-border/50 text-sm">
+                <div className="flex items-center gap-4 text-muted-foreground flex-wrap">
+                  <div>
+                    Menampilkan <span className="font-semibold text-foreground">{(currentPage - 1) * desktopItemsPerPage + (desktopData.length > 0 ? 1 : 0)} - {(currentPage - 1) * desktopItemsPerPage + desktopData.length}</span> dari <span className="font-semibold text-foreground">{filteredShipments.length}</span> produk
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>Tampilkan:</span>
+                    <select
+                      value={desktopItemsPerPage}
+                      onChange={(e) => {
+                        setDesktopItemsPerPage(Number(e.target.value))
+                        setCurrentPage(1)
+                      }}
+                      className="h-8 rounded-md border border-border/50 bg-background px-2 py-1 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-8 w-8 rounded-md border-border/50 bg-background hover:bg-muted"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-8 w-8 rounded-md border-border/50 bg-background hover:bg-muted"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  {Array.from({ length: desktopTotalPages }, (_, i) => i + 1)
+                    .filter(p => {
+                      if (desktopTotalPages <= 7) return true;
+                      if (p === 1 || p === desktopTotalPages) return true;
+                      if (p >= currentPage - 1 && p <= currentPage + 1) return true;
+                      return false;
+                    })
+                    .map((p, i, arr) => (
+                      <div key={p} className="flex items-center gap-1">
+                        {i > 0 && p - arr[i - 1] > 1 && <span className="text-muted-foreground px-1">...</span>}
+                        <Button
+                          variant={currentPage === p ? "default" : "outline"}
+                          size="sm"
+                          className={cn(
+                            "h-8 min-w-8 p-0 px-2 border-border/50",
+                            currentPage === p ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600" : "bg-background hover:bg-muted text-foreground"
+                          )}
+                          onClick={() => setCurrentPage(p)}
+                        >
+                          {p}
+                        </Button>
+                      </div>
+                    ))
+                  }
+
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-8 w-8 rounded-md border-border/50 bg-background hover:bg-muted"
+                    onClick={() => setCurrentPage(prev => Math.min(desktopTotalPages, prev + 1))}
+                    disabled={currentPage === desktopTotalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-8 w-8 rounded-md border-border/50 bg-background hover:bg-muted"
+                    onClick={() => setCurrentPage(desktopTotalPages)}
+                    disabled={currentPage === desktopTotalPages}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Mobile Card View */}
           <div className="md:hidden divide-y divide-border/50">
-            {shipments.length === 0 ? (
+            {mobileData.length === 0 ? (
               <div className="h-32 flex items-center justify-center text-muted-foreground text-sm">Belum ada data.</div>
             ) : (
-              shipments.map(shipment => (
+              mobileData.map(shipment => (
                 <div key={shipment.id} className="p-4 space-y-3">
                   <div className="flex justify-between items-start">
                     <div>
@@ -700,6 +950,11 @@ export function SupplyShipmentClient({
                   )}
                 </div>
               ))
+            )}
+            {mobileData.length > 0 && mobileData.length < filteredShipments.length && (
+              <div ref={lastElementRef} className="py-6 flex justify-center">
+                <div className="text-xs text-muted-foreground animate-pulse font-medium">Memuat data selanjutnya...</div>
+              </div>
             )}
           </div>
         </CardContent>
