@@ -223,7 +223,7 @@ export async function approveSupplyShipment(shipmentId: string) {
       })
 
       if (!shipment || shipment.status !== "PENDING") {
-        throw new Error("Pengiriman tidak ditemukan atau sudah diproses.")
+        throw new Error(`Pengiriman tidak ditemukan atau sudah diproses.`)
       }
 
       await tx.supplyShipment.update({
@@ -255,6 +255,60 @@ export async function approveSupplyShipment(shipmentId: string) {
     return { success: true }
   } catch (error: any) {
     console.error("Gagal approve SupplyShipment:", error)
+    return { success: false, error: error.message || "Terjadi kesalahan saat validasi." }
+  }
+}
+
+export async function approveBulkSupplyShipments(shipmentIds: string[]) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user || (session.user.role !== "ADMIN" && session.user.role !== "MANAGER")) {
+      return { success: false, error: "Hanya Admin/Manajer yang bisa memvalidasi." }
+    }
+
+    if (!shipmentIds || shipmentIds.length === 0) return { success: false, error: "Tidak ada data untuk divalidasi." }
+
+    await prisma.$transaction(async (tx) => {
+      for (const shipmentId of shipmentIds) {
+        const shipment = await tx.supplyShipment.findUnique({
+          where: { id: shipmentId },
+          include: { product: true }
+        })
+
+        if (!shipment || shipment.status !== "PENDING") continue;
+
+        await tx.supplyShipment.update({
+          where: { id: shipmentId },
+          data: { status: "APPROVED", adminId: session.user.id }
+        })
+
+        await tx.product.update({
+          where: { id: shipment.productId },
+          data: {
+            stock: { increment: shipment.quantity },
+            ...(shipment.costPrice != null && { costPrice: shipment.costPrice }),
+          }
+        })
+
+        await tx.inventoryTransaction.create({
+          data: {
+            productId: shipment.productId,
+            type: "IN",
+            quantity: shipment.quantity,
+            notes: `Validasi Supply Shipment: ${shipment.notes || '-'} (ID: ${shipment.id})`,
+            userId: session.user.id
+          }
+        })
+      }
+    }, {
+      timeout: 20000 // allow up to 20 seconds for bulk operations
+    })
+
+    revalidatePath("/dashboard/products")
+    revalidatePath("/dashboard/inventory/supply-shipments")
+    return { success: true, count: shipmentIds.length }
+  } catch (error: any) {
+    console.error("Gagal approve bulk SupplyShipment:", error)
     return { success: false, error: error.message || "Terjadi kesalahan saat validasi." }
   }
 }

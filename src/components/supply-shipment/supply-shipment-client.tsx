@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { Plus, Minus, Truck, Clock, CheckCircle2, XCircle, Search, X, UserPlus, Package, ChevronDown, Trash2, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, TrendingUp, WalletCards, Coins } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -17,7 +18,7 @@ import {
 import { Label } from "@/components/ui/label"
 import {
   createBulkSupplyShipment, createQuickSupplier, createQuickProduct,
-  approveSupplyShipment, rejectSupplyShipment,
+  approveSupplyShipment, rejectSupplyShipment, approveBulkSupplyShipments,
   type BulkShipmentItem,
 } from "@/app/actions/supply-shipment"
 
@@ -71,7 +72,9 @@ function Combobox({ options, value, onChange, placeholder = "Pilih...", onAddNew
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const ref = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [coords, setCoords] = useState({ top: 0, bottom: 0, left: 0, width: 0, windowHeight: 0 })
 
   const selected = value ? options.find(o => o.id === value) : null
 
@@ -82,9 +85,23 @@ function Combobox({ options, value, onChange, placeholder = "Pilih...", onAddNew
       )
     : options
 
+  const updateCoords = useCallback(() => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      setCoords({
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        width: rect.width,
+        windowHeight: window.innerHeight
+      })
+    }
+  }, [])
+
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (ref.current && !ref.current.contains(e.target as Node) &&
+          dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setOpen(false)
         setQuery("")
       }
@@ -93,8 +110,21 @@ function Combobox({ options, value, onChange, placeholder = "Pilih...", onAddNew
     return () => document.removeEventListener("mousedown", handler)
   }, [])
 
+  useEffect(() => {
+    if (open) {
+      updateCoords()
+      window.addEventListener("scroll", updateCoords, true)
+      window.addEventListener("resize", updateCoords)
+      return () => {
+        window.removeEventListener("scroll", updateCoords, true)
+        window.removeEventListener("resize", updateCoords)
+      }
+    }
+  }, [open, updateCoords])
+
   const handleOpen = () => {
     if (disabled) return
+    updateCoords()
     setOpen(true)
     setTimeout(() => inputRef.current?.focus(), 50)
   }
@@ -110,98 +140,119 @@ function Combobox({ options, value, onChange, placeholder = "Pilih...", onAddNew
     onChange("", "")
   }
 
-  return (
-    <div ref={ref} className="relative w-full">
-      {/* Trigger */}
-      <div
-        role="combobox"
-        aria-expanded={open}
-        onClick={handleOpen}
-        className={cn(
-          "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer select-none transition-all",
-          "hover:border-primary/50 focus-visible:outline-none",
-          open && "border-primary ring-1 ring-primary/20",
-          disabled && "opacity-50 cursor-not-allowed"
-        )}
-      >
-        <span className={selected ? "text-foreground font-medium" : "text-muted-foreground"}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <div className="flex items-center gap-1 shrink-0">
-          {selected && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="rounded p-0.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+  const dropUp = (coords.windowHeight - coords.bottom) < 250 && coords.top > 250
+  
+  const dropdownStyle: React.CSSProperties = {
+    position: 'fixed',
+    left: coords.left,
+    width: coords.width,
+    zIndex: 99999,
+  }
+  
+  if (dropUp) {
+    dropdownStyle.bottom = coords.windowHeight - coords.top + 4
+  } else {
+    dropdownStyle.top = coords.bottom + 4
+  }
+
+  const dropdownContent = open ? (
+    <div
+      ref={dropdownRef}
+      style={dropdownStyle}
+      className="bg-card border border-border/60 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+    >
+      {/* Search Input */}
+      <div className="p-2 border-b border-border/40 shrink-0">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Ketik untuk mencari..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="w-full pl-8 pr-3 py-1.5 text-sm bg-muted/30 rounded-lg border border-border/30 focus:outline-none focus:ring-1 focus:ring-primary"
+          />
         </div>
       </div>
 
-      {/* Dropdown */}
-      {open && (
-        <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-card border border-border/60 rounded-xl shadow-2xl overflow-hidden">
-          {/* Search Input */}
-          <div className="p-2 border-b border-border/40">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder="Ketik untuk mencari..."
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-sm bg-muted/30 rounded-lg border border-border/30 focus:outline-none focus:ring-1 focus:ring-primary"
-              />
+      <div className="max-h-52 overflow-y-auto">
+        {/* Add New Button */}
+        {onAddNew && (
+          <button
+            type="button"
+            onClick={() => { setOpen(false); setQuery(""); onAddNew() }}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-primary hover:bg-primary/5 transition-colors font-semibold border-b border-border/30 shrink-0"
+          >
+            <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
+              <Plus className="h-3.5 w-3.5" />
             </div>
-          </div>
+            {addNewLabel}
+            {query && <span className="text-xs text-muted-foreground font-normal ml-1">"{query}"</span>}
+          </button>
+        )}
 
-          <div className="max-h-52 overflow-y-auto">
-            {/* Add New Button */}
-            {onAddNew && (
+        {/* Options */}
+        {filtered.length === 0 ? (
+          <div className="px-3 py-5 text-center text-sm text-muted-foreground">
+            {options.length === 0 ? "Belum ada data." : "Tidak ditemukan."}
+          </div>
+        ) : (
+          filtered.map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => handleSelect(opt)}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-left hover:bg-muted/50 transition-colors",
+                value === opt.id && "bg-primary/5 text-primary font-semibold"
+              )}
+            >
+              <div>
+                <p className="font-medium leading-tight">{opt.label}</p>
+                {opt.sub && <p className="text-[11px] text-muted-foreground">{opt.sub}</p>}
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  ) : null
+
+  return (
+    <>
+      <div ref={ref} className="relative w-full">
+        {/* Trigger */}
+        <div
+          role="combobox"
+          aria-expanded={open}
+          onClick={handleOpen}
+          className={cn(
+            "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer select-none transition-all",
+            "hover:border-primary/50 focus-visible:outline-none",
+            open && "border-primary ring-1 ring-primary/20",
+            disabled && "opacity-50 cursor-not-allowed"
+          )}
+        >
+          <span className={selected ? "text-foreground font-medium truncate pr-2" : "text-muted-foreground truncate pr-2"}>
+            {selected ? selected.label : placeholder}
+          </span>
+          <div className="flex items-center gap-1 shrink-0">
+            {selected && (
               <button
                 type="button"
-                onClick={() => { setOpen(false); setQuery(""); onAddNew() }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-primary hover:bg-primary/5 transition-colors font-semibold border-b border-border/30"
+                onClick={handleClear}
+                className="rounded p-0.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
               >
-                <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
-                  <Plus className="h-3.5 w-3.5" />
-                </div>
-                {addNewLabel}
-                {query && <span className="text-xs text-muted-foreground font-normal ml-1">"{query}"</span>}
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
-
-            {/* Options */}
-            {filtered.length === 0 ? (
-              <div className="px-3 py-5 text-center text-sm text-muted-foreground">
-                {options.length === 0 ? "Belum ada data." : "Tidak ditemukan."}
-              </div>
-            ) : (
-              filtered.map(opt => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => handleSelect(opt)}
-                  className={cn(
-                    "w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-left hover:bg-muted/50 transition-colors",
-                    value === opt.id && "bg-primary/5 text-primary font-semibold"
-                  )}
-                >
-                  <div>
-                    <p className="font-medium leading-tight">{opt.label}</p>
-                    {opt.sub && <p className="text-[11px] text-muted-foreground">{opt.sub}</p>}
-                  </div>
-                </button>
-              ))
-            )}
+            <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
           </div>
         </div>
-      )}
-    </div>
+      </div>
+      {open && typeof document !== "undefined" && createPortal(dropdownContent, document.body)}
+    </>
   )
 }
 
@@ -250,7 +301,7 @@ function AddSupplierDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+    <Dialog open={open} onOpenChange={v => !v && onClose()} disablePointerDismissal>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -328,7 +379,7 @@ function AddProductDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+    <Dialog open={open} onOpenChange={v => !v && onClose()} disablePointerDismissal>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -410,6 +461,7 @@ export function SupplyShipmentClient({
   const [filterStartDate, setFilterStartDate] = useState<string>("")
   const [filterEndDate, setFilterEndDate] = useState<string>("")
   const [filterSupplierId, setFilterSupplierId] = useState<string>("all")
+  const [filterNote, setFilterNote] = useState<string>("")
 
   const setDefaultFilters = useCallback(() => {
     const today = new Date()
@@ -426,6 +478,7 @@ export function SupplyShipmentClient({
     setFilterStartDate(fmt(firstDay))
     setFilterEndDate(fmt(lastDay))
     setFilterSupplierId("all")
+    setFilterNote("")
   }, [])
 
   useEffect(() => {
@@ -445,6 +498,9 @@ export function SupplyShipmentClient({
     }
     if (filterSupplierId !== "all") {
       if (shipment.supplier.id !== filterSupplierId) return false
+    }
+    if (filterNote && filterNote.trim() !== "") {
+      if (!shipment.notes || !shipment.notes.toLowerCase().includes(filterNote.toLowerCase())) return false
     }
     return true
   })
@@ -475,7 +531,7 @@ export function SupplyShipmentClient({
   useEffect(() => {
     setCurrentPage(1)
     setMobileVisibleCount(5)
-  }, [filterStartDate, filterEndDate, filterSupplierId])
+  }, [filterStartDate, filterEndDate, filterSupplierId, filterNote])
 
   const desktopTotalPages = Math.ceil(filteredShipments.length / desktopItemsPerPage)
   const desktopData = filteredShipments.slice((currentPage - 1) * desktopItemsPerPage, currentPage * desktopItemsPerPage)
@@ -518,12 +574,54 @@ export function SupplyShipmentClient({
     sub: `SKU: ${p.sku} · Stok: ${p.stock}`,
   }))
 
+  // ── Draft Persistence ───────────────────────────────────────────────────────
+  const DRAFT_KEY = "supply-shipment-draft"
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false)
+
+  useEffect(() => {
+    try {
+      const draft = localStorage.getItem(DRAFT_KEY)
+      if (draft) {
+        const parsed = JSON.parse(draft)
+        if (parsed.selectedSupplierId) setSelectedSupplierId(parsed.selectedSupplierId)
+        if (parsed.notes) setNotes(parsed.notes)
+        if (parsed.rows && Array.isArray(parsed.rows) && parsed.rows.length > 0) {
+          setRows(parsed.rows)
+        }
+      }
+    } catch (e) {}
+    setIsDraftLoaded(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isDraftLoaded) return
+    const hasData = selectedSupplierId || notes || rows.some(r => r.productId || r.costPrice || r.quantity > 1)
+    if (hasData) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ selectedSupplierId, notes, rows }))
+    } else {
+      localStorage.removeItem(DRAFT_KEY)
+    }
+  }, [selectedSupplierId, notes, rows, isDraftLoaded])
+
+  useEffect(() => {
+    const hasData = selectedSupplierId || notes || rows.some(r => r.productId)
+    if (!hasData) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [selectedSupplierId, notes, rows])
+
   // ── Reset form ──────────────────────────────────────────────────────────────
 
   const resetForm = () => {
     setSelectedSupplierId("")
     setNotes("")
     setRows([makeRow()])
+    localStorage.removeItem(DRAFT_KEY)
   }
 
   // ── Submit ──────────────────────────────────────────────────────────────────
@@ -587,6 +685,25 @@ export function SupplyShipmentClient({
     else toast.error("Gagal", { description: res.error })
   }
 
+  const handleBulkApprove = async () => {
+    const pendingIds = filteredShipments
+      .filter(s => s.status === "PENDING")
+      .map(s => s.id)
+
+    if (pendingIds.length === 0) {
+      toast.error("Tidak ada pengajuan menunggu di layar ini.")
+      return
+    }
+
+    if (!confirm(`Validasi dan terima ${pendingIds.length} pengiriman sekaligus?`)) return
+    
+    setIsSubmitting(true)
+    const res = await approveBulkSupplyShipments(pendingIds)
+    if (res.success) toast.success(`${res.count} Pengiriman Divalidasi!`)
+    else toast.error("Gagal Validasi", { description: res.error })
+    setIsSubmitting(false)
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
@@ -614,7 +731,7 @@ export function SupplyShipmentClient({
             </p>
           </div>
           <Button
-            onClick={() => { resetForm(); setIsRequestOpen(true) }}
+            onClick={() => setIsRequestOpen(true)}
             className={cn("shadow-lg", isAdmin ? "bg-amber-600 hover:bg-amber-700 shadow-amber-500/20" : "shadow-primary/20")}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -686,17 +803,27 @@ export function SupplyShipmentClient({
           </div>
         </div>
         {isAdmin && (
-          <div className="space-y-1.5 w-full sm:w-[250px]">
-            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Supplier</Label>
-            <Combobox
-              options={[{ id: "all", label: "Semua Supplier" }, ...supplierOptions]}
-              value={filterSupplierId}
-              onChange={(id) => setFilterSupplierId(id || "all")}
-              placeholder="Pilih Supplier..."
-            />
-          </div>
+          <>
+            <div className="space-y-1.5 w-full sm:w-[250px]">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Supplier</Label>
+              <Combobox
+                options={[{ id: "all", label: "Semua Supplier" }, ...supplierOptions]}
+                value={filterSupplierId}
+                onChange={(id) => setFilterSupplierId(id || "all")}
+                placeholder="Pilih Supplier..."
+              />
+            </div>
+            <div className="space-y-1.5 w-full sm:w-[250px]">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Catatan / Struk</Label>
+              <Input 
+                value={filterNote} 
+                onChange={e => setFilterNote(e.target.value)}
+                placeholder="Cari no. struk/catatan..."
+              />
+            </div>
+          </>
         )}
-        {(filterStartDate || filterEndDate || filterSupplierId !== "all") && (
+        {(filterStartDate || filterEndDate || filterSupplierId !== "all" || filterNote) && (
           <Button 
             variant="ghost" 
             onClick={setDefaultFilters}
@@ -710,11 +837,22 @@ export function SupplyShipmentClient({
 
       {/* ── Shipment Table ───────────────────────────────────────────────────── */}
       <Card className="border-border/50 shadow-sm bg-card/50 backdrop-blur-md">
-        <CardHeader className="border-b border-border/50">
+        <CardHeader className="border-b border-border/50 flex flex-row items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <Clock className={cn("h-5 w-5", isAdmin ? "text-amber-500" : "text-primary")} />
             {isAdmin ? "Antrean Validasi Supply Shipment" : "Daftar Pengiriman Anda"}
           </CardTitle>
+          {isAdmin && filteredShipments.some(s => s.status === "PENDING") && (
+            <Button 
+              size="sm" 
+              onClick={handleBulkApprove} 
+              disabled={isSubmitting}
+              className="bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Terima Semua ({filteredShipments.filter(s => s.status === "PENDING").length})
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           <div className="hidden md:block">
@@ -961,8 +1099,8 @@ export function SupplyShipmentClient({
       </Card>
 
       {/* ── Main Form Dialog ─────────────────────────────────────────────────── */}
-      <Dialog open={isRequestOpen} onOpenChange={v => { if (!v) { setIsRequestOpen(false); resetForm() } }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={isRequestOpen} onOpenChange={v => { if (!v) { setIsRequestOpen(false) } }} disablePointerDismissal>
+        <DialogContent className="sm:max-w-lg md:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Truck className="h-5 w-5 text-primary" />
@@ -1019,11 +1157,20 @@ export function SupplyShipmentClient({
                 <span className="text-[11px] text-muted-foreground">{rows.filter(r => r.productId).length} produk dipilih</span>
               </div>
 
-              <div className="space-y-3">
+              {/* Desktop Table Header */}
+              <div className="hidden md:flex gap-4 px-2 pb-2 border-b border-border/50 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                <div className="flex-1">Produk / Item</div>
+                <div className="w-[160px]">Jumlah (pcs)</div>
+                <div className="w-[160px]">HPP/Satuan (Rp)</div>
+                <div className="w-10"></div>
+              </div>
+
+              <div className="space-y-3 md:space-y-1">
                 {rows.map((row, idx) => (
-                  <div key={row.uid} className="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-3">
-                    {/* Row Header */}
-                    <div className="flex items-center justify-between">
+                  <div key={row.uid} className="rounded-xl border border-border/50 bg-muted/10 p-3 md:p-2 md:bg-transparent md:border-none relative group transition-all md:hover:bg-muted/10 md:rounded-lg">
+                    
+                    {/* Mobile Header (hidden on desktop) */}
+                    <div className="flex md:hidden items-center justify-between mb-3 pb-2 border-b border-border/50">
                       <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                         Produk #{idx + 1}
                       </span>
@@ -1038,94 +1185,123 @@ export function SupplyShipmentClient({
                       )}
                     </div>
 
-                    {/* Product Combobox */}
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <Combobox
-                          options={productOptions}
-                          value={row.productId}
-                          onChange={(id, label) => {
-                            const prod = products.find(p => p.id === id)
-                            updateRow(row.uid, {
-                              productId: id,
-                              productName: label,
-                              costPrice: prod?.costPrice != null ? String(prod.costPrice) : row.costPrice,
-                            })
-                          }}
-                          placeholder="Ketik atau pilih produk..."
-                          onAddNew={() => {
-                            setAddProductInitialName("")
-                            setAddProductTargetRowUid(row.uid)
-                            setShowAddProduct(true)
-                          }}
-                          addNewLabel="Tambah Produk Baru"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="shrink-0 border-primary/30 text-primary hover:bg-primary/5"
-                        onClick={() => {
-                          setAddProductInitialName("")
-                          setAddProductTargetRowUid(row.uid)
-                          setShowAddProduct(true)
-                        }}
-                        title="Tambah produk baru"
-                      >
-                        <Package className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {/* Qty + HPP */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Jumlah (pcs)</Label>
-                        <div className="flex items-center gap-1">
-                          <button
+                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                      {/* Product Combobox */}
+                      <div className="flex-1 w-full space-y-1.5 md:space-y-0">
+                        <Label className="text-xs font-semibold text-muted-foreground md:hidden">Produk / Item</Label>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <Combobox
+                              options={productOptions}
+                              value={row.productId}
+                              onChange={(id, label) => {
+                                const prod = products.find(p => p.id === id)
+                                updateRow(row.uid, {
+                                  productId: id,
+                                  productName: label,
+                                  costPrice: prod?.costPrice != null ? String(prod.costPrice) : row.costPrice,
+                                })
+                              }}
+                              placeholder="Ketik atau pilih produk..."
+                              onAddNew={() => {
+                                setAddProductInitialName("")
+                                setAddProductTargetRowUid(row.uid)
+                                setShowAddProduct(true)
+                              }}
+                              addNewLabel="Tambah Produk Baru"
+                            />
+                          </div>
+                          <Button
                             type="button"
-                            onClick={() => updateRow(row.uid, { quantity: Math.max(1, row.quantity - 1) })}
-                            className="h-9 w-9 rounded-md border border-border/50 bg-background flex items-center justify-center hover:bg-muted transition-colors shrink-0"
+                            variant="outline"
+                            size="icon"
+                            className="shrink-0 border-primary/30 text-primary hover:bg-primary/5 h-10 w-10"
+                            onClick={() => {
+                              setAddProductInitialName("")
+                              setAddProductTargetRowUid(row.uid)
+                              setShowAddProduct(true)
+                            }}
+                            title="Tambah produk baru"
                           >
-                            <Minus className="h-3.5 w-3.5" />
-                          </button>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={row.quantity}
-                            onChange={e => updateRow(row.uid, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
-                            className="text-center font-black"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => updateRow(row.uid, { quantity: row.quantity + 1 })}
-                            className="h-9 w-9 rounded-md border border-border/50 bg-background flex items-center justify-center hover:bg-muted transition-colors shrink-0"
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
+                            <Package className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">HPP/Satuan (Rp)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="any"
-                          value={row.costPrice}
-                          onChange={e => updateRow(row.uid, { costPrice: e.target.value })}
-                          placeholder="Opsional, misal 5000"
-                        />
+
+                      {/* Qty + HPP */}
+                      <div className="w-full md:w-auto grid grid-cols-2 md:flex gap-4">
+                        <div className="space-y-1.5 md:space-y-0 md:w-[160px]">
+                          <Label className="text-xs font-semibold text-muted-foreground md:hidden">Jumlah (pcs)</Label>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => updateRow(row.uid, { quantity: Math.max(1, row.quantity - 1) })}
+                              className="h-10 w-10 rounded-md border border-border/50 bg-background flex items-center justify-center hover:bg-muted transition-colors shrink-0"
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={row.quantity || ""}
+                              onChange={e => {
+                                const val = e.target.value;
+                                updateRow(row.uid, { quantity: val === "" ? 0 : parseInt(val) || 0 });
+                              }}
+                              onBlur={() => {
+                                if (!row.quantity || row.quantity < 1) updateRow(row.uid, { quantity: 1 });
+                              }}
+                              onFocus={e => e.target.select()}
+                              className="h-10 text-center font-black px-1"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => updateRow(row.uid, { quantity: (row.quantity || 0) + 1 })}
+                              className="h-10 w-10 rounded-md border border-border/50 bg-background flex items-center justify-center hover:bg-muted transition-colors shrink-0"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5 md:space-y-0 md:w-[160px]">
+                          <Label className="text-xs font-semibold text-muted-foreground md:hidden">HPP/Satuan (Rp)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={row.costPrice}
+                            onChange={e => updateRow(row.uid, { costPrice: e.target.value })}
+                            placeholder="Opsional, 5000"
+                            className="h-10"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Desktop Delete Column */}
+                      <div className="hidden md:flex w-10 items-center justify-center">
+                        {rows.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeRow(row.uid)}
+                            className="h-10 w-10 rounded-md flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            title="Hapus baris ini"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
                     {/* Total preview */}
                     {row.productId && row.costPrice && (
-                      <div className="text-[11px] text-muted-foreground bg-background/60 rounded-lg px-3 py-1.5 border border-border/30">
-                        Total HPP: <span className="font-bold text-amber-600">
-                          Rp {(parseFloat(row.costPrice) * row.quantity).toLocaleString("id-ID")}
-                        </span>
-                        <span className="mx-1.5">·</span>
-                        {row.quantity} pcs × Rp {parseFloat(row.costPrice).toLocaleString("id-ID")}
+                      <div className="mt-3 md:mt-1 flex md:justify-end md:pr-[56px]">
+                        <div className="text-[11px] text-muted-foreground bg-background/80 rounded-lg px-3 py-1.5 border border-border/30 w-full md:w-auto md:text-right md:bg-transparent md:border-none md:p-0">
+                          Total HPP: <span className="font-bold text-amber-600">
+                            Rp {(parseFloat(row.costPrice) * row.quantity).toLocaleString("id-ID")}
+                          </span>
+                          <span className="mx-1.5 hidden md:inline">·</span>
+                          <span className="hidden md:inline">{row.quantity} pcs × Rp {parseFloat(row.costPrice).toLocaleString("id-ID")}</span>
+                        </div>
                       </div>
                     )}
                   </div>
